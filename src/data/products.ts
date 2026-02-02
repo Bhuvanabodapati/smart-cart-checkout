@@ -26,24 +26,9 @@ export const products: Product[] = [
   { id: "P015", name: "Cookies Pack", weight: 250, price: 65, category: "Snacks", icon: "🍪", barcode: "8901234509876" },
 ];
 
-// Find product by barcode - returns matching product or generates a demo product for unknown barcodes
+// Find product by barcode
 export function findProductByBarcode(barcode: string): Product | undefined {
-  const found = products.find(p => p.barcode === barcode);
-  if (found) return found;
-  
-  // For demo purposes: generate a random product for any scanned barcode
-  const demoProducts = [
-    { name: "Demo Item", weight: 250, price: 99, category: "Demo", icon: "📦" },
-    { name: "Sample Product", weight: 500, price: 150, category: "Demo", icon: "🛒" },
-    { name: "Test Item", weight: 300, price: 75, category: "Demo", icon: "🏷️" },
-  ];
-  
-  const randomDemo = demoProducts[Math.floor(Math.random() * demoProducts.length)];
-  return {
-    id: `DEMO-${barcode.slice(-4)}`,
-    barcode,
-    ...randomDemo,
-  };
+  return products.find(p => p.barcode === barcode);
 }
 
 export interface CartItem extends Product {
