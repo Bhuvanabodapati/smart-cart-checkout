@@ -1,4 +1,4 @@
-import { Barcode, CheckCircle, Camera, XCircle } from 'lucide-react';
+import { Barcode, CheckCircle, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { products, Product, findProductByBarcode } from '@/data/products';
+import { Product, findProductByBarcode } from '@/data/products';
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from 'sonner';
@@ -38,12 +38,9 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
           aspectRatio: 1.5,
         },
         (decodedText) => {
-          // On successful scan
           handleBarcodeScan(decodedText);
         },
-        () => {
-          // Ignore errors during scanning
-        }
+        () => {}
       );
       setIsScanning(true);
     } catch (err) {
@@ -66,7 +63,6 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
   };
 
   const handleBarcodeScan = (barcode: string) => {
-    // Prevent duplicate scans within 2 seconds
     if (lastScanned === barcode) return;
     setLastScanned(barcode);
 
@@ -78,20 +74,11 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
       toast.error(`Unknown barcode: ${barcode}`);
     }
 
-    // Reset last scanned after 2 seconds
     setTimeout(() => setLastScanned(null), 2000);
-  };
-
-  // Handle manual product selection as fallback
-  const handleProductSelect = (product: Product) => {
-    onScan(product);
-    stopScanner();
-    setOpen(false);
   };
 
   useEffect(() => {
     if (open) {
-      // Delay to ensure DOM is ready
       setTimeout(() => startScanner(), 100);
     } else {
       stopScanner();
@@ -120,7 +107,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
             <Camera className="w-6 h-6 mr-2" />
             Tap to Scan
           </Button>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Camera className="w-5 h-5" />
@@ -128,7 +115,6 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
               </DialogTitle>
             </DialogHeader>
             
-            {/* Camera Scanner */}
             <div className="relative bg-black rounded-lg overflow-hidden">
               <div id="barcode-reader" ref={containerRef} className="w-full" />
               {isScanning && (
@@ -138,26 +124,6 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
                   </span>
                 </div>
               )}
-            </div>
-
-            {/* Manual Selection Fallback */}
-            <div className="border-t pt-4 mt-4">
-              <p className="text-sm text-muted-foreground mb-3">
-                Or select product manually:
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[200px] overflow-y-auto">
-                {products.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => handleProductSelect(product)}
-                    className="p-2 rounded-lg border border-border bg-secondary hover:bg-accent hover:border-primary transition-all text-left"
-                  >
-                    <div className="text-xl mb-1">{product.icon}</div>
-                    <div className="font-medium text-xs text-foreground">{product.name}</div>
-                    <div className="text-xs text-muted-foreground">₹{product.price}</div>
-                  </button>
-                ))}
-              </div>
             </div>
           </DialogContent>
         </Dialog>
