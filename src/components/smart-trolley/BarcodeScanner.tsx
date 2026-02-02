@@ -62,19 +62,22 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
     }
   };
 
-  const handleBarcodeScan = (barcode: string) => {
+  const handleBarcodeScan = async (barcode: string) => {
     if (lastScanned === barcode) return;
     setLastScanned(barcode);
 
     const product = findProductByBarcode(barcode);
     if (product) {
+      // Stop scanner and close dialog immediately after successful scan
+      await stopScanner();
+      setOpen(false);
       onScan(product);
       toast.success(`Scanned: ${product.name}`);
     } else {
-      toast.error(`Unknown barcode: ${barcode}`);
+      toast.error(`Unknown barcode: ${barcode}. Product not in database.`);
     }
 
-    setTimeout(() => setLastScanned(null), 2000);
+    setTimeout(() => setLastScanned(null), 3000);
   };
 
   useEffect(() => {
