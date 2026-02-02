@@ -27,15 +27,15 @@ export const products: Product[] = [
   { id: "P015", name: "Cookies Pack", weight: 250, price: 65, category: "Snacks", icon: "🍪", barcode: "8901234509876" },
   
   // Real product barcodes from user
-  { id: "P016", name: "Grocery Item", weight: 300, price: 120, category: "Grocery", icon: "📦", barcode: "6203011060092" },
-  { id: "P017", name: "Aashirvaad Product", weight: 500, price: 85, category: "Grocery", icon: "🌾", barcode: "8901725150129" },
-  { id: "P018", name: "Aashirvaad Cloves (50g)", weight: 50, price: 45, category: "Spices", icon: "🌿", barcode: "8901725014834" },
-  { id: "P019", name: "Beverage", weight: 350, price: 40, category: "Beverages", icon: "🥤", barcode: "8901058000269" },
-  { id: "P020", name: "Cadbury Dairy Milk (180g)", weight: 180, price: 120, category: "Snacks", icon: "🍫", barcode: "7622201783297" },
-  { id: "P021", name: "Snack Item", weight: 200, price: 55, category: "Snacks", icon: "🍿", barcode: "8904043901077" },
-  { id: "P022", name: "Imported Product", weight: 400, price: 150, category: "Grocery", icon: "🛒", barcode: "6009510804782" },
-  { id: "P023", name: "Grocery Pack", weight: 250, price: 75, category: "Grocery", icon: "📦", barcode: "8901764041259" },
-  { id: "P024", name: "Coca-Cola (500ml)", weight: 550, price: 45, category: "Beverages", icon: "🥤", barcode: "5449000027559" },
+  { id: "P016", name: "Ice Cream Feast Vanilla (1L)", weight: 1000, price: 90, category: "Frozen", icon: "🍦", barcode: "6203011060092" },
+  { id: "P017", name: "Aashirvaad Atta (1Kg)", weight: 1000, price: 60, category: "Grocery", icon: "🌾", barcode: "8901725150129" },
+  { id: "P018", name: "Aashirvaad Clove Whole Spice (50g)", weight: 50, price: 75, category: "Spices", icon: "🌿", barcode: "8901725014834" },
+  { id: "P019", name: "Maggi 2-Minute Masala Noodles (70g)", weight: 70, price: 15, category: "Grocery", icon: "🍜", barcode: "8901058000269" },
+  { id: "P020", name: "Cadbury Dairy Milk Fruit & Nut (180g)", weight: 180, price: 224, category: "Snacks", icon: "🍫", barcode: "7622201783297" },
+  { id: "P021", name: "Tata Salt (1Kg)", weight: 1000, price: 44, category: "Grocery", icon: "🧂", barcode: "8904043901077" },
+  { id: "P022", name: "Lay's Salted Potato Chips (36g)", weight: 36, price: 10, category: "Snacks", icon: "🥔", barcode: "6009510804782" },
+  { id: "P023", name: "Thums Up (250ml)", weight: 280, price: 20, category: "Beverages", icon: "🥤", barcode: "8901764041259" },
+  { id: "P024", name: "Sprite (2L)", weight: 2050, price: 95, category: "Beverages", icon: "🥤", barcode: "5449000027559" },
 ];
 
 // Find product by barcode
