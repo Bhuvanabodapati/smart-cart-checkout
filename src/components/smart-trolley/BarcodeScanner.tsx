@@ -63,10 +63,20 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
   };
 
   const handleBarcodeScan = async (barcode: string) => {
-    if (lastScanned === barcode) return;
-    setLastScanned(barcode);
+    // Normalize barcode: trim whitespace and remove any non-numeric characters for EAN/UPC barcodes
+    const normalizedBarcode = barcode.trim().replace(/[^0-9]/g, '');
+    
+    console.log('Raw barcode:', barcode, '| Normalized:', normalizedBarcode);
+    
+    if (lastScanned === normalizedBarcode) return;
+    setLastScanned(normalizedBarcode);
 
-    const product = findProductByBarcode(barcode);
+    // Try both original and normalized barcode
+    let product = findProductByBarcode(normalizedBarcode);
+    if (!product) {
+      product = findProductByBarcode(barcode.trim());
+    }
+    
     if (product) {
       // Stop scanner and close dialog immediately after successful scan
       await stopScanner();
@@ -74,7 +84,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
       onScan(product);
       toast.success(`Scanned: ${product.name}`);
     } else {
-      toast.error(`Unknown barcode: ${barcode}. Product not in database.`);
+      toast.error(`Unknown barcode: ${normalizedBarcode}. Product not in database.`);
     }
 
     setTimeout(() => setLastScanned(null), 3000);
