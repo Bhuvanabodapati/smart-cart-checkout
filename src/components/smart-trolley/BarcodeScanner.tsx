@@ -82,7 +82,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
       await stopScanner();
       setOpen(false);
       onScan(product);
-      toast.success(`Scanned: ${product.name}`);
+      toast.success(`Item scanned and added to cart: ${product.name}`);
     } else {
       toast.error(`Unknown barcode: ${normalizedBarcode}. Product not in database.`);
     }
