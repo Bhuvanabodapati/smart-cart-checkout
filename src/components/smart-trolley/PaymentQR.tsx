@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import paytmQR from '@/assets/paytm-qr.jpeg';
 
 interface PaymentQRProps {
   canPay: boolean;
@@ -42,55 +42,29 @@ export function PaymentQR({
         <CardContent className="flex flex-col items-center justify-center h-[calc(100%-60px)] space-y-3">
           {canPay ? (
             <>
-              {/* QR Code simulation */}
-              <div className="w-24 h-24 bg-foreground rounded-lg p-1.5 relative">
-                <div className="w-full h-full bg-background rounded grid grid-cols-5 gap-0.5 p-1">
-                  {[...Array(25)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={cn(
-                        "rounded-sm",
-                        Math.random() > 0.4 ? "bg-foreground" : "bg-background"
-                      )}
-                    />
-                  ))}
-                </div>
-                <QrCode className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-primary bg-background rounded p-0.5" />
+              {/* Real Paytm QR Code */}
+              <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-primary/20">
+                <img 
+                  src={paytmQR} 
+                  alt="Paytm Payment QR Code" 
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               <p className="text-lg font-bold text-primary">₹{totalPrice}</p>
-              <p className="text-xs text-muted-foreground">Scan or tap to pay</p>
+              <p className="text-xs text-muted-foreground">Scan QR to pay via UPI</p>
+              <p className="text-xs text-muted-foreground font-mono">8074802069@ptsbi</p>
 
-              {/* Payment buttons */}
-              <div className="flex gap-2 w-full">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => onPayment('PhonePe')}
-                  disabled={isProcessing}
-                >
-                  📱 PhonePe
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => onPayment('GPay')}
-                  disabled={isProcessing}
-                >
-                  💳 GPay
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => onPayment('Paytm')}
-                  disabled={isProcessing}
-                >
-                  💰 Paytm
-                </Button>
-              </div>
+              {/* Confirm payment button */}
+              <Button
+                className="w-full"
+                size="sm"
+                onClick={() => onPayment('UPI')}
+                disabled={isProcessing}
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                I've Paid - Confirm
+              </Button>
             </>
           ) : (
             <div className="text-center text-muted-foreground">

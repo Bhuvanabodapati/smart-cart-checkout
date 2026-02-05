@@ -71,31 +71,6 @@ export function useSmartTrolley() {
         cart: [...prev.cart, { ...product, quantity: 1 }],
       };
     });
-    
-    // Simulate automatic mismatch detection after scanning (20% chance for demo)
-    // In real system, this would compare camera feed with scanned item
-    setTimeout(() => {
-      const randomCheck = Math.random();
-      if (randomCheck < 0.1) {
-        // 10% chance of camera mismatch
-        soundManager.playAlertAlarm();
-        setState(prev => ({ ...prev, cameraMismatch: true }));
-        alertIntervalRef.current = setInterval(() => {
-          soundManager.playAlertAlarm();
-        }, 2000);
-      } else if (randomCheck < 0.2) {
-        // 10% chance of weight mismatch
-        soundManager.playAlertAlarm();
-        setState(prev => ({
-          ...prev,
-          weightMismatch: true,
-          trolleyWeight: Math.round(prev.scannedWeight * 0.7),
-        }));
-        alertIntervalRef.current = setInterval(() => {
-          soundManager.playAlertAlarm();
-        }, 2000);
-      }
-    }, 1500); // Check 1.5 seconds after scan to simulate verification
   }, []);
 
   const updateQuantity = useCallback((productId: string, delta: number) => {
