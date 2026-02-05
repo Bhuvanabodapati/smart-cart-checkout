@@ -12,9 +12,9 @@ interface BarcodeScannerProps {
 
 export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
-  const [lastScanned, setLastScanned] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isProcessingRef = useRef(false); // Immediate blocking flag
 
   const startScanner = async () => {
     if (!containerRef.current || isScanning) return;
@@ -57,13 +57,14 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
   };
 
   const handleBarcodeScan = async (barcode: string) => {
+    // Immediately block if already processing (ref updates instantly, unlike state)
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
     // Normalize barcode: trim whitespace and remove any non-numeric characters for EAN/UPC barcodes
     const normalizedBarcode = barcode.trim().replace(/[^0-9]/g, '');
     
     console.log('Raw barcode:', barcode, '| Normalized:', normalizedBarcode);
-    
-    if (lastScanned === normalizedBarcode) return;
-    setLastScanned(normalizedBarcode);
 
     // Try both original and normalized barcode
     let product = findProductByBarcode(normalizedBarcode);
@@ -80,8 +81,10 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
       toast.error(`Unknown barcode: ${normalizedBarcode}. Product not in database.`);
     }
 
-    // Reset after 2 seconds to allow re-scanning same item
-    setTimeout(() => setLastScanned(null), 2000);
+    // Reset processing flag after 2 seconds to allow re-scanning
+    setTimeout(() => {
+      isProcessingRef.current = false;
+    }, 2000);
   };
 
   // Cleanup on unmount
