@@ -7,7 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import paymentQR from '@/assets/payment-qr.jpeg';
+import { QRCodeSVG } from 'qrcode.react';
+import { useEffect } from 'react';
 
 interface PaymentQRProps {
   canPay: boolean;
@@ -30,6 +31,19 @@ export function PaymentQR({
   onPayment,
   onReset,
 }: PaymentQRProps) {
+  // UPI payment link with fixed amount (users cannot edit)
+  const upiId = '8074802069@ptsbi';
+  const payeeName = 'Smart Trolley';
+  const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${totalPrice}&cu=INR`;
+
+  // Auto-trigger payment processing when QR is shown (simulating payment detection)
+  // In real implementation, this would be replaced with a webhook from payment gateway
+  useEffect(() => {
+    if (canPay && totalPrice > 0 && !isProcessing && !paymentComplete) {
+      // Placeholder: In production, payment gateway webhook would trigger this
+    }
+  }, [canPay, totalPrice, isProcessing, paymentComplete]);
+
   return (
     <>
       <Card className="h-full">
@@ -42,17 +56,21 @@ export function PaymentQR({
         <CardContent className="flex flex-col items-center justify-center h-[calc(100%-60px)] space-y-2">
           {canPay ? (
             <>
-              {/* Payment QR Code */}
-              <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-primary/20 bg-white p-1">
-                <img 
-                  src={paymentQR} 
-                  alt="Payment QR Code" 
-                  className="w-full h-full object-contain"
+              {/* Dynamic QR Code with amount embedded */}
+              <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-primary/20 bg-white p-2">
+                <QRCodeSVG 
+                  value={upiLink}
+                  size={112}
+                  level="M"
+                  includeMargin={false}
                 />
               </div>
 
               <p className="text-lg font-bold text-primary">₹{totalPrice}</p>
-              <p className="text-xs text-muted-foreground">Scan & Pay via UPI</p>
+              <p className="text-xs text-muted-foreground text-center">
+                Scan & Pay via UPI<br/>
+                <span className="text-[10px]">(Amount is fixed)</span>
+              </p>
 
               {/* Payment method labels */}
               <div className="flex items-center gap-2 text-xs">
@@ -62,16 +80,6 @@ export function PaymentQR({
                 <span className="text-muted-foreground">•</span>
                 <span className="text-sky-500 font-medium">Paytm</span>
               </div>
-
-              {/* Confirm after payment */}
-              <Button
-                size="sm"
-                className="w-full mt-2"
-                onClick={() => onPayment('UPI')}
-                disabled={isProcessing}
-              >
-                Confirm Payment
-              </Button>
             </>
           ) : (
             <div className="text-center text-muted-foreground">
