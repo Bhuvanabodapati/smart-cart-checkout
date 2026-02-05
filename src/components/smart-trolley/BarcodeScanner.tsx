@@ -1,12 +1,6 @@
-import { Barcode, CheckCircle, Camera } from 'lucide-react';
+import { Barcode, CheckCircle, Camera, Play, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Product, findProductByBarcode } from '@/data/products';
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -17,14 +11,13 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
-  const [open, setOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const startScanner = async () => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isScanning) return;
 
     try {
       const scanner = new Html5Qrcode("barcode-reader");
@@ -34,7 +27,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
         { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 250, height: 150 },
+          qrbox: { width: 200, height: 120 },
           aspectRatio: 1.5,
         },
         (decodedText) => {
@@ -43,10 +36,10 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
         () => {}
       );
       setIsScanning(true);
+      toast.success("Scanner started - point camera at barcode");
     } catch (err) {
       console.error("Failed to start camera:", err);
       toast.error("Camera access denied or not available");
-      setOpen(false);
     }
   };
 
@@ -56,13 +49,14 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
         await scannerRef.current.stop();
         scannerRef.current = null;
         setIsScanning(false);
+        toast.info("Scanner stopped");
       } catch (err) {
         console.error("Error stopping scanner:", err);
       }
     }
   };
 
-  const handleBarcodeScan = async (barcode: string) => {
+  const handleBarcodeScan = (barcode: string) => {
     // Normalize barcode: trim whitespace and remove any non-numeric characters for EAN/UPC barcodes
     const normalizedBarcode = barcode.trim().replace(/[^0-9]/g, '');
     
@@ -78,29 +72,24 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
     }
     
     if (product) {
-      // Stop scanner and close dialog immediately after successful scan
-      await stopScanner();
-      setOpen(false);
       onScan(product);
       toast.success(`Item scanned and added to cart: ${product.name}`);
     } else {
       toast.error(`Unknown barcode: ${normalizedBarcode}. Product not in database.`);
     }
 
-    setTimeout(() => setLastScanned(null), 3000);
+    // Reset after 2 seconds to allow re-scanning same item
+    setTimeout(() => setLastScanned(null), 2000);
   };
 
+  // Cleanup on unmount
   useEffect(() => {
-    if (open) {
-      setTimeout(() => startScanner(), 100);
-    } else {
-      stopScanner();
-    }
-
     return () => {
-      stopScanner();
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
     };
-  }, [open]);
+  }, []);
 
   return (
     <Card className="h-full">
@@ -110,40 +99,54 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
           Barcode Scanner
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col items-center justify-center h-[calc(100%-60px)]">
-        <Dialog open={open} onOpenChange={setOpen}>
-          <Button 
-            onClick={() => setOpen(true)}
-            className="w-full h-20 text-lg font-semibold animate-pulse-glow"
-            size="lg"
-          >
-            <Camera className="w-6 h-6 mr-2" />
-            Tap to Scan
-          </Button>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Camera className="w-5 h-5" />
-                Scan Barcode
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="relative bg-black rounded-lg overflow-hidden">
-              <div id="barcode-reader" ref={containerRef} className="w-full" />
-              {isScanning && (
-                <div className="absolute bottom-4 left-0 right-0 text-center">
-                  <span className="bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                    Point camera at barcode
-                  </span>
-                </div>
-              )}
+      <CardContent className="flex flex-col h-[calc(100%-60px)] gap-2">
+        {/* Camera view area */}
+        <div className="flex-1 relative bg-secondary rounded-lg overflow-hidden min-h-[100px]">
+          <div id="barcode-reader" ref={containerRef} className="w-full h-full" />
+          {!isScanning && (
+            <div className="absolute inset-0 flex items-center justify-center bg-secondary">
+              <div className="text-center text-muted-foreground">
+                <Camera className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                <span className="text-xs">Click Start to scan</span>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          )}
+          {isScanning && (
+            <div className="absolute bottom-2 left-0 right-0 text-center">
+              <span className="bg-black/70 text-white px-2 py-0.5 rounded-full text-xs">
+                Point at barcode
+              </span>
+            </div>
+          )}
+        </div>
 
-        <div className="mt-4 flex items-center gap-2 text-success">
-          <CheckCircle className="w-4 h-4" />
-          <span className="text-sm">Ready</span>
+        {/* Control buttons */}
+        <div className="flex gap-2">
+          <Button 
+            onClick={startScanner}
+            disabled={isScanning}
+            className="flex-1"
+            size="sm"
+          >
+            <Play className="w-4 h-4 mr-1" />
+            Start Scan
+          </Button>
+          <Button 
+            onClick={stopScanner}
+            disabled={!isScanning}
+            variant="destructive"
+            className="flex-1"
+            size="sm"
+          >
+            <Square className="w-4 h-4 mr-1" />
+            Stop Scan
+          </Button>
+        </div>
+
+        {/* Status indicator */}
+        <div className={`flex items-center justify-center gap-2 ${isScanning ? 'text-success' : 'text-muted-foreground'}`}>
+          <CheckCircle className="w-3 h-3" />
+          <span className="text-xs">{isScanning ? 'Scanning...' : 'Ready'}</span>
         </div>
       </CardContent>
     </Card>
