@@ -57,20 +57,17 @@ export function PaymentQR({
           {canPay ? (
             <>
               {/* Dynamic QR Code with amount embedded */}
-              <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-primary/20 bg-white p-2">
+              <div className="w-28 h-28 rounded-lg border-2 border-primary/20 bg-white p-1.5 flex items-center justify-center">
                 <QRCodeSVG 
                   value={upiLink}
-                  size={112}
+                  size={100}
                   level="M"
                   includeMargin={false}
                 />
               </div>
 
               <p className="text-lg font-bold text-primary">₹{totalPrice}</p>
-              <p className="text-xs text-muted-foreground text-center">
-                Scan & Pay via UPI<br/>
-                <span className="text-[10px]">(Amount is fixed)</span>
-              </p>
+              <p className="text-xs text-muted-foreground">Scan & Pay via UPI</p>
 
               {/* Payment method labels */}
               <div className="flex items-center gap-2 text-xs">
