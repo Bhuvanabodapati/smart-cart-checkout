@@ -1,4 +1,4 @@
-import { QrCode, CreditCard, Loader2, CheckCircle, Smartphone } from 'lucide-react';
+import { QrCode, CreditCard, Loader2, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,12 +30,6 @@ export function PaymentQR({
   onPayment,
   onReset,
 }: PaymentQRProps) {
-  const paymentMethods = [
-    { id: 'phonepe', name: 'PhonePe', color: 'bg-purple-600 hover:bg-purple-700' },
-    { id: 'gpay', name: 'GPay', color: 'bg-blue-600 hover:bg-blue-700' },
-    { id: 'paytm', name: 'Paytm', color: 'bg-sky-500 hover:bg-sky-600' },
-  ];
-
   return (
     <>
       <Card className="h-full">
@@ -49,32 +43,35 @@ export function PaymentQR({
           {canPay ? (
             <>
               {/* Payment QR Code */}
-              <div className="w-28 h-28 rounded-lg overflow-hidden border-2 border-primary/20">
+              <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-primary/20 bg-white p-1">
                 <img 
                   src={paymentQR} 
                   alt="Payment QR Code" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
 
               <p className="text-lg font-bold text-primary">₹{totalPrice}</p>
               <p className="text-xs text-muted-foreground">Scan & Pay via UPI</p>
 
-              {/* Payment method buttons */}
-              <div className="w-full grid grid-cols-3 gap-1">
-                {paymentMethods.map((method) => (
-                  <Button
-                    key={method.id}
-                    size="sm"
-                    className={`${method.color} text-white text-xs px-2`}
-                    onClick={() => onPayment(method.name)}
-                    disabled={isProcessing}
-                  >
-                    <Smartphone className="w-3 h-3 mr-1" />
-                    {method.name}
-                  </Button>
-                ))}
+              {/* Payment method labels */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-purple-600 font-medium">PhonePe</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-blue-600 font-medium">GPay</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-sky-500 font-medium">Paytm</span>
               </div>
+
+              {/* Confirm after payment */}
+              <Button
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => onPayment('UPI')}
+                disabled={isProcessing}
+              >
+                Confirm Payment
+              </Button>
             </>
           ) : (
             <div className="text-center text-muted-foreground">
