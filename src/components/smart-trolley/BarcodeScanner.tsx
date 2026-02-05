@@ -56,7 +56,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
     }
   };
 
-  const handleBarcodeScan = (barcode: string) => {
+  const handleBarcodeScan = async (barcode: string) => {
     // Normalize barcode: trim whitespace and remove any non-numeric characters for EAN/UPC barcodes
     const normalizedBarcode = barcode.trim().replace(/[^0-9]/g, '');
     
@@ -74,6 +74,8 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
     if (product) {
       onScan(product);
       toast.success(`Item scanned and added to cart: ${product.name}`);
+      // Stop scanner after successful scan (one-time scan)
+      await stopScanner();
     } else {
       toast.error(`Unknown barcode: ${normalizedBarcode}. Product not in database.`);
     }
