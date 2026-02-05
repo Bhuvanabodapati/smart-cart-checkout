@@ -1,4 +1,4 @@
-import { QrCode, CreditCard, Loader2, CheckCircle } from 'lucide-react';
+import { QrCode, CreditCard, Loader2, CheckCircle, Smartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import paytmQR from '@/assets/paytm-qr.jpeg';
+import paymentQR from '@/assets/payment-qr.jpeg';
 
 interface PaymentQRProps {
   canPay: boolean;
@@ -30,6 +30,12 @@ export function PaymentQR({
   onPayment,
   onReset,
 }: PaymentQRProps) {
+  const paymentMethods = [
+    { id: 'phonepe', name: 'PhonePe', color: 'bg-purple-600 hover:bg-purple-700' },
+    { id: 'gpay', name: 'GPay', color: 'bg-blue-600 hover:bg-blue-700' },
+    { id: 'paytm', name: 'Paytm', color: 'bg-sky-500 hover:bg-sky-600' },
+  ];
+
   return (
     <>
       <Card className="h-full">
@@ -39,32 +45,36 @@ export function PaymentQR({
             Payment
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center h-[calc(100%-60px)] space-y-3">
+        <CardContent className="flex flex-col items-center justify-center h-[calc(100%-60px)] space-y-2">
           {canPay ? (
             <>
-              {/* Real Paytm QR Code */}
-              <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-primary/20">
+              {/* Payment QR Code */}
+              <div className="w-28 h-28 rounded-lg overflow-hidden border-2 border-primary/20">
                 <img 
-                  src={paytmQR} 
-                  alt="Paytm Payment QR Code" 
+                  src={paymentQR} 
+                  alt="Payment QR Code" 
                   className="w-full h-full object-cover"
                 />
               </div>
 
               <p className="text-lg font-bold text-primary">₹{totalPrice}</p>
-              <p className="text-xs text-muted-foreground">Scan QR to pay via UPI</p>
-              <p className="text-xs text-muted-foreground font-mono">8074802069@ptsbi</p>
+              <p className="text-xs text-muted-foreground">Scan & Pay via UPI</p>
 
-              {/* Confirm payment button */}
-              <Button
-                className="w-full"
-                size="sm"
-                onClick={() => onPayment('UPI')}
-                disabled={isProcessing}
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                I've Paid - Confirm
-              </Button>
+              {/* Payment method buttons */}
+              <div className="w-full grid grid-cols-3 gap-1">
+                {paymentMethods.map((method) => (
+                  <Button
+                    key={method.id}
+                    size="sm"
+                    className={`${method.color} text-white text-xs px-2`}
+                    onClick={() => onPayment(method.name)}
+                    disabled={isProcessing}
+                  >
+                    <Smartphone className="w-3 h-3 mr-1" />
+                    {method.name}
+                  </Button>
+                ))}
+              </div>
             </>
           ) : (
             <div className="text-center text-muted-foreground">
