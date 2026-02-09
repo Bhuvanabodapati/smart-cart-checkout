@@ -1,17 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, AlertTriangle, Video, VideoOff } from 'lucide-react';
+import { useRef, useEffect, useCallback } from 'react';
+import { Camera, AlertTriangle, VideoOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface CameraFeedProps {
   frameCount: number;
   isMismatch: boolean;
+  isActive: boolean;
 }
 
-export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -24,8 +22,6 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
 
   const startCamera = useCallback(async () => {
     try {
-      setError(null);
-      
       // Stop any existing stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -52,11 +48,9 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
-        setIsStreaming(true);
       }
     } catch (err) {
-      console.error('Camera error:', err);
-      setError('USB Camera not found');
+      console.error('Trolley camera error:', err);
     }
   }, []);
 
@@ -68,8 +62,16 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    setIsStreaming(false);
   }, []);
+
+  // Start/stop camera based on isActive prop
+  useEffect(() => {
+    if (isActive) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [isActive, startCamera, stopCamera]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -86,29 +88,9 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
       isMismatch && "border-destructive animate-alert-flash"
     )}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Camera className="w-4 h-4 text-primary" />
-            Trolley Camera
-          </div>
-          <Button
-            variant={isStreaming ? "destructive" : "default"}
-            size="sm"
-            className="h-6 text-xs px-2"
-            onClick={isStreaming ? stopCamera : startCamera}
-          >
-            {isStreaming ? (
-              <>
-                <VideoOff className="w-3 h-3 mr-1" />
-                Stop
-              </>
-            ) : (
-              <>
-                <Video className="w-3 h-3 mr-1" />
-                Start
-              </>
-            )}
-          </Button>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Camera className="w-4 h-4 text-primary" />
+          Trolley Camera
         </CardTitle>
       </CardHeader>
       
@@ -126,7 +108,7 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
             muted
             className={cn(
               "absolute inset-0 w-full h-full object-cover",
-              !isStreaming && "hidden"
+              !isActive && "hidden"
             )}
           />
 
@@ -149,19 +131,10 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
           )}
 
           {/* Placeholder when camera is off */}
-          {!isStreaming && !isMismatch && (
+          {!isActive && !isMismatch && (
             <div className="text-muted-foreground/50 text-center z-10">
-              {error ? (
-                <>
-                  <VideoOff className="w-12 h-12 mx-auto mb-2 text-destructive/50" />
-                  <span className="text-xs text-destructive/70">{error}</span>
-                </>
-              ) : (
-                <>
-                  <Camera className="w-16 h-16 mx-auto mb-2 opacity-30" />
-                  <span className="text-xs">USB Camera (046d:0825)</span>
-                </>
-              )}
+              <VideoOff className="w-12 h-12 mx-auto mb-2 opacity-30" />
+              <span className="text-xs">Waiting for scan...</span>
             </div>
           )}
 
@@ -169,13 +142,13 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
           <div className="absolute top-2 left-2 flex items-center gap-2 z-20">
             <div className={cn(
               "w-2 h-2 rounded-full",
-              isMismatch ? "bg-destructive" : isStreaming ? "bg-success animate-pulse" : "bg-muted-foreground"
+              isMismatch ? "bg-destructive" : isActive ? "bg-success animate-pulse" : "bg-muted-foreground"
             )} />
             <span className={cn(
               "text-xs bg-background/50 px-1 rounded",
-              isStreaming ? "text-success" : "text-foreground/70"
+              isActive ? "text-success" : "text-foreground/70"
             )}>
-              {isStreaming ? "REC" : "OFF"}
+              {isActive ? "REC" : "OFF"}
             </span>
           </div>
 
@@ -197,11 +170,11 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
           "absolute -bottom-1 left-0 right-0 py-1 text-center text-xs font-medium",
           isMismatch 
             ? "bg-destructive text-destructive-foreground" 
-            : isStreaming 
+            : isActive 
               ? "bg-success/20 text-success"
               : "bg-muted text-muted-foreground"
         )}>
-          {isMismatch ? "⚠️ ALERT: Item Mismatch" : isStreaming ? "✓ Live Feed Active" : "○ Camera Standby"}
+          {isMismatch ? "⚠️ ALERT: Item Mismatch" : isActive ? "✓ Live Feed Active" : "○ Camera Standby"}
         </div>
       </CardContent>
     </Card>

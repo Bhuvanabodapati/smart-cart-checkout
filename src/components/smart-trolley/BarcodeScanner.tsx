@@ -8,13 +8,14 @@ import { toast } from 'sonner';
 
 interface BarcodeScannerProps {
   onScan: (product: Product) => void;
+  isScanning: boolean;
+  onScanningChange: (scanning: boolean) => void;
 }
 
-export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
-  const [isScanning, setIsScanning] = useState(false);
+export function BarcodeScanner({ onScan, isScanning, onScanningChange }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isProcessingRef = useRef(false); // Immediate blocking flag
+  const isProcessingRef = useRef(false);
 
   const startScanner = async () => {
     if (!containerRef.current || isScanning) return;
@@ -35,7 +36,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
         },
         () => {}
       );
-      setIsScanning(true);
+      onScanningChange(true);
       toast.success("Scanner started - point camera at barcode");
     } catch (err) {
       console.error("Failed to start camera:", err);
@@ -48,7 +49,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
       try {
         await scannerRef.current.stop();
         scannerRef.current = null;
-        setIsScanning(false);
+        onScanningChange(false);
         toast.info("Scanner stopped");
       } catch (err) {
         console.error("Error stopping scanner:", err);
@@ -57,16 +58,13 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
   };
 
   const handleBarcodeScan = async (barcode: string) => {
-    // Immediately block if already processing (ref updates instantly, unlike state)
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
 
-    // Normalize barcode: trim whitespace and remove any non-numeric characters for EAN/UPC barcodes
     const normalizedBarcode = barcode.trim().replace(/[^0-9]/g, '');
     
     console.log('Raw barcode:', barcode, '| Normalized:', normalizedBarcode);
 
-    // Try both original and normalized barcode
     let product = findProductByBarcode(normalizedBarcode);
     if (!product) {
       product = findProductByBarcode(barcode.trim());
@@ -75,19 +73,16 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
     if (product) {
       onScan(product);
       toast.success(`Item scanned and added to cart: ${product.name}`);
-      // Stop scanner after successful scan (one-time scan)
       await stopScanner();
     } else {
       toast.error(`Unknown barcode: ${normalizedBarcode}. Product not in database.`);
     }
 
-    // Reset processing flag after 2 seconds to allow re-scanning
     setTimeout(() => {
       isProcessingRef.current = false;
     }, 2000);
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
