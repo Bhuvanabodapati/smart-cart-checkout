@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, AlertTriangle, Video, VideoOff } from 'lucide-react';
+import { Camera, AlertTriangle, Video, VideoOff, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 interface CameraFeedProps {
@@ -9,9 +10,16 @@ interface CameraFeedProps {
   isMismatch: boolean;
 }
 
+interface CameraDevice {
+  deviceId: string;
+  label: string;
+}
+
 export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -22,14 +30,67 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
     hour12: false,
   });
 
+  // Enumerate available cameras
+  const refreshCameras = useCallback(async () => {
+    try {
+      // Request permission first to get labeled devices
+      await navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+      });
+      
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices
+        .filter(device => device.kind === 'videoinput')
+        .map((device, index) => ({
+          deviceId: device.deviceId,
+          label: device.label || `Camera ${index + 1}`
+        }));
+      
+      setCameras(videoDevices);
+      
+      // Auto-select external camera (usually not the first one, or one with "USB" in name)
+      const externalCam = videoDevices.find(cam => 
+        cam.label.toLowerCase().includes('usb') || 
+        cam.label.toLowerCase().includes('logitech') ||
+        cam.label.toLowerCase().includes('c270')
+      );
+      
+      if (externalCam) {
+        setSelectedCamera(externalCam.deviceId);
+      } else if (videoDevices.length > 0 && !selectedCamera) {
+        // If multiple cameras, prefer the second one (often external)
+        setSelectedCamera(videoDevices.length > 1 ? videoDevices[1].deviceId : videoDevices[0].deviceId);
+      }
+    } catch (err) {
+      console.error('Error enumerating cameras:', err);
+      setError('Cannot access cameras');
+    }
+  }, [selectedCamera]);
+
+  // Load cameras on mount
+  useEffect(() => {
+    refreshCameras();
+  }, []);
+
   const startCamera = useCallback(async () => {
+    if (!selectedCamera) {
+      setError('Please select a camera first');
+      return;
+    }
+
     try {
       setError(null);
+      
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
+          deviceId: { exact: selectedCamera },
           width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'environment' // Prefer back camera on mobile
+          height: { ideal: 720 }
         }
       });
       
@@ -42,7 +103,7 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
       console.error('Camera error:', err);
       setError('Camera access denied or unavailable');
     }
-  }, []);
+  }, [selectedCamera]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -54,6 +115,13 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
     }
     setIsStreaming(false);
   }, []);
+
+  // Restart camera when selection changes while streaming
+  useEffect(() => {
+    if (isStreaming && selectedCamera) {
+      startCamera();
+    }
+  }, [selectedCamera]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -69,33 +137,65 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
       "h-full relative overflow-hidden",
       isMismatch && "border-destructive animate-alert-flash"
     )}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center justify-between">
+      <CardHeader className="pb-1 px-3 pt-2">
+        <CardTitle className="text-sm flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Camera className="w-4 h-4 text-primary" />
-            Camera Feed
+            <span className="hidden sm:inline">Camera</span>
           </div>
-          <Button
-            variant={isStreaming ? "destructive" : "default"}
-            size="sm"
-            className="h-6 text-xs px-2"
-            onClick={isStreaming ? stopCamera : startCamera}
-          >
-            {isStreaming ? (
-              <>
-                <VideoOff className="w-3 h-3 mr-1" />
-                Stop
-              </>
-            ) : (
-              <>
-                <Video className="w-3 h-3 mr-1" />
-                Start
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={refreshCameras}
+              title="Refresh camera list"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </Button>
+            <Button
+              variant={isStreaming ? "destructive" : "default"}
+              size="sm"
+              className="h-6 text-xs px-2"
+              onClick={isStreaming ? stopCamera : startCamera}
+            >
+              {isStreaming ? (
+                <>
+                  <VideoOff className="w-3 h-3 mr-1" />
+                  Stop
+                </>
+              ) : (
+                <>
+                  <Video className="w-3 h-3 mr-1" />
+                  Start
+                </>
+              )}
+            </Button>
+          </div>
         </CardTitle>
+        
+        {/* Camera selector */}
+        <div className="mt-1">
+          <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select webcam..." />
+            </SelectTrigger>
+            <SelectContent>
+              {cameras.length === 0 ? (
+                <SelectItem value="none" disabled>No cameras found</SelectItem>
+              ) : (
+                cameras.map((cam) => (
+                  <SelectItem key={cam.deviceId} value={cam.deviceId}>
+                    {cam.label}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
-      <CardContent className="relative h-[calc(100%-60px)]">
+      
+      <CardContent className="relative h-[calc(100%-90px)] px-3 pb-3">
         {/* Video/Camera view container */}
         <div className={cn(
           "w-full h-full rounded-lg bg-gradient-to-br from-secondary to-muted flex items-center justify-center relative overflow-hidden",
@@ -125,66 +225,65 @@ export function CameraFeed({ frameCount, isMismatch }: CameraFeedProps) {
           {/* Mismatch warning overlay */}
           {isMismatch && (
             <div className="absolute inset-0 bg-destructive/30 flex flex-col items-center justify-center gap-2 z-10">
-              <AlertTriangle className="w-12 h-12 text-destructive animate-bounce" />
-              <span className="text-destructive font-bold text-lg bg-background/80 px-3 py-1 rounded">MISMATCH DETECTED</span>
-              <span className="text-destructive text-xs bg-background/80 px-2 py-0.5 rounded">Item verification failed</span>
+              <AlertTriangle className="w-10 h-10 text-destructive animate-bounce" />
+              <span className="text-destructive font-bold text-sm bg-background/80 px-2 py-1 rounded">MISMATCH</span>
             </div>
           )}
 
           {/* Placeholder when camera is off */}
           {!isStreaming && !isMismatch && (
-            <div className="text-muted-foreground/50 text-center z-10">
+            <div className="text-muted-foreground/50 text-center z-10 p-2">
               {error ? (
                 <>
-                  <VideoOff className="w-12 h-12 mx-auto mb-2 text-destructive/50" />
-                  <span className="text-xs text-destructive/70">{error}</span>
+                  <VideoOff className="w-10 h-10 mx-auto mb-1 text-destructive/50" />
+                  <span className="text-[10px] text-destructive/70">{error}</span>
                 </>
               ) : (
                 <>
-                  <Camera className="w-16 h-16 mx-auto mb-2 opacity-30" />
-                  <span className="text-xs">Click "Start" to enable camera</span>
+                  <Camera className="w-10 h-10 mx-auto mb-1 opacity-30" />
+                  <span className="text-[10px]">Select webcam & click Start</span>
                 </>
               )}
             </div>
           )}
 
           {/* Camera info overlay */}
-          <div className="absolute top-2 left-2 flex items-center gap-2 z-20">
+          <div className="absolute top-1 left-1 flex items-center gap-1 z-20">
             <div className={cn(
               "w-2 h-2 rounded-full",
               isMismatch ? "bg-destructive" : isStreaming ? "bg-success animate-pulse" : "bg-muted-foreground"
             )} />
             <span className={cn(
-              "text-xs",
+              "text-[10px] bg-background/50 px-1 rounded",
               isStreaming ? "text-success" : "text-foreground/70"
             )}>
               {isStreaming ? "REC" : "OFF"}
             </span>
           </div>
 
-          <div className="absolute top-2 right-2 text-xs text-foreground/70 bg-background/50 px-1 rounded z-20">
-            CAM-01
+          <div className="absolute top-1 right-1 text-[10px] text-foreground/70 bg-background/50 px-1 rounded z-20">
+            TROLLEY-CAM
           </div>
 
-          <div className="absolute bottom-2 left-2 text-xs text-foreground/70 bg-background/50 px-1 rounded z-20">
+          <div className="absolute bottom-1 left-1 text-[10px] text-foreground/70 bg-background/50 px-1 rounded z-20">
             {timestamp}
           </div>
 
-          <div className="absolute bottom-2 right-2 text-xs text-foreground/70 bg-background/50 px-1 rounded z-20">
-            Frame: {String(frameCount).padStart(4, '0')}
+          <div className="absolute bottom-1 right-1 text-[10px] text-foreground/70 bg-background/50 px-1 rounded z-20">
+            F:{String(frameCount).padStart(4, '0')}
           </div>
         </div>
 
         {/* Status indicator */}
         <div className={cn(
-          "absolute -bottom-1 left-0 right-0 py-1 text-center text-xs font-medium",
+          "absolute -bottom-1 left-0 right-0 py-0.5 text-center text-[10px] font-medium",
           isMismatch 
             ? "bg-destructive text-destructive-foreground" 
             : isStreaming 
               ? "bg-success/20 text-success"
               : "bg-muted text-muted-foreground"
         )}>
-          {isMismatch ? "⚠️ ALERT: Item Mismatch" : isStreaming ? "✓ Live Feed Active" : "○ Camera Standby"}
+          {isMismatch ? "⚠️ MISMATCH" : isStreaming ? "✓ Live" : "○ Standby"}
         </div>
       </CardContent>
     </Card>
