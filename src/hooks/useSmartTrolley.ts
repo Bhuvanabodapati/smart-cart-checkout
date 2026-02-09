@@ -13,6 +13,7 @@ export interface TrolleyState {
   transactionId: string;
   paymentMethod: string;
   frameCount: number;
+  isScanning: boolean;
 }
 
 export function useSmartTrolley() {
@@ -27,6 +28,7 @@ export function useSmartTrolley() {
     transactionId: '',
     paymentMethod: '',
     frameCount: 0,
+    isScanning: false,
   });
 
   const alertIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -152,6 +154,10 @@ export function useSmartTrolley() {
     }, 2500);
   }, []);
 
+  const setIsScanning = useCallback((scanning: boolean) => {
+    setState(prev => ({ ...prev, isScanning: scanning }));
+  }, []);
+
   const resetTransaction = useCallback(() => {
     setState({
       cart: [],
@@ -164,6 +170,7 @@ export function useSmartTrolley() {
       transactionId: '',
       paymentMethod: '',
       frameCount: state.frameCount,
+      isScanning: false,
     });
   }, [state.frameCount]);
 
@@ -187,5 +194,6 @@ export function useSmartTrolley() {
     stopWeightAlert,
     processPayment,
     resetTransaction,
+    setIsScanning,
   };
 }

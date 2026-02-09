@@ -20,12 +20,17 @@ const Index = () => {
         {/* Left Column - Scanner & Camera */}
         <div className="flex flex-col gap-3">
           <div className="flex-1">
-            <BarcodeScanner onScan={trolley.addToCart} />
+            <BarcodeScanner 
+              onScan={trolley.addToCart}
+              isScanning={trolley.isScanning}
+              onScanningChange={trolley.setIsScanning}
+            />
           </div>
           <div className="flex-1">
             <CameraFeed 
               frameCount={trolley.frameCount} 
-              isMismatch={trolley.cameraMismatch} 
+              isMismatch={trolley.cameraMismatch}
+              isActive={trolley.isScanning}
             />
           </div>
         </div>
