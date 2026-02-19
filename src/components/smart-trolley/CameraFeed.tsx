@@ -22,24 +22,28 @@ export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps
 
   const startCamera = useCallback(async () => {
     try {
-      // Stop any existing stream
+      // Stop any existing stream first
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
 
-      // Find USB webcam - prefer external USB camera over built-in laptop camera
+      // Get initial stream to populate device labels
+      const initialStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      initialStream.getTracks().forEach(track => track.stop());
+
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(d => d.kind === 'videoinput');
       
-      // Priority: USB Video Device > any external camera > last device (usually external)
-      const usbCamera = videoDevices.find(device => 
-        device.label.toLowerCase().includes('usb video device') ||
-        device.label.toLowerCase().includes('usb camera') ||
-        device.label.toLowerCase().includes('web camera') ||
-        device.label.toLowerCase().includes('logitech') ||
-        device.label.toLowerCase().includes('c270') ||
-        device.label.includes('046d:0825')
-      ) || (videoDevices.length > 1 ? videoDevices[videoDevices.length - 1] : undefined);
+      console.log('Available cameras:', videoDevices.map(d => `${d.label} (${d.deviceId.slice(0,8)})`));
+
+      // Priority: USB/external camera over built-in
+      const usbCamera = videoDevices.find(device => {
+        const label = device.label.toLowerCase();
+        return label.includes('usb') || label.includes('web cam') ||
+               label.includes('logitech') || label.includes('c270') ||
+               label.includes('046d');
+      }) || (videoDevices.length > 1 ? videoDevices[videoDevices.length - 1] : undefined);
 
       const constraints: MediaStreamConstraints = {
         video: usbCamera 
