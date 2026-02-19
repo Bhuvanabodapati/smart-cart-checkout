@@ -10,9 +10,10 @@ interface BarcodeScannerProps {
   onScan: (product: Product) => void;
   isScanning: boolean;
   onScanningChange: (scanning: boolean) => void;
+  disabled?: boolean;
 }
 
-export function BarcodeScanner({ onScan, isScanning, onScanningChange }: BarcodeScannerProps) {
+export function BarcodeScanner({ onScan, isScanning, onScanningChange, disabled }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
@@ -124,7 +125,7 @@ export function BarcodeScanner({ onScan, isScanning, onScanningChange }: Barcode
         <div className="flex gap-2">
           <Button 
             onClick={startScanner}
-            disabled={isScanning}
+            disabled={isScanning || disabled}
             className="flex-1"
             size="sm"
           >

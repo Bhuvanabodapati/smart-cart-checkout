@@ -6,6 +6,8 @@ import { WeightSensor } from '@/components/smart-trolley/WeightSensor';
 import { PaymentQR } from '@/components/smart-trolley/PaymentQR';
 import { AlertControls } from '@/components/smart-trolley/AlertControls';
 import { useSmartTrolley } from '@/hooks/useSmartTrolley';
+import { PackageCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const trolley = useSmartTrolley();
@@ -14,6 +16,32 @@ const Index = () => {
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <Header />
+
+      {/* Placement Prompt Overlay */}
+      {trolley.waitingForPlacement && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-2xl p-8 max-w-sm mx-4 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+              <PackageCheck className="w-8 h-8 text-primary animate-bounce" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">Place the item in the trolley</h2>
+            <p className="text-sm text-muted-foreground mb-1">
+              Scanned: <span className="font-semibold text-primary">{trolley.lastScannedProduct}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mb-6">
+              Place the item in the trolley to continue scanning
+            </p>
+            <Button 
+              onClick={trolley.confirmPlacement} 
+              className="w-full"
+              size="lg"
+            >
+              <PackageCheck className="w-4 h-4 mr-2" />
+              Item Placed — Continue
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content - 3 Column Grid */}
       <main className="flex-1 grid grid-cols-4 gap-3 p-3 min-h-0">
@@ -24,13 +52,14 @@ const Index = () => {
               onScan={trolley.addToCart}
               isScanning={trolley.isScanning}
               onScanningChange={trolley.setIsScanning}
+              disabled={trolley.waitingForPlacement}
             />
           </div>
           <div className="flex-1">
             <CameraFeed 
               frameCount={trolley.frameCount} 
               isMismatch={trolley.cameraMismatch}
-              isActive={trolley.isScanning}
+              isActive={trolley.isScanning || trolley.waitingForPlacement}
             />
           </div>
         </div>

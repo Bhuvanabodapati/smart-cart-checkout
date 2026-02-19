@@ -14,6 +14,8 @@ export interface TrolleyState {
   paymentMethod: string;
   frameCount: number;
   isScanning: boolean;
+  waitingForPlacement: boolean;
+  lastScannedProduct: string | null;
 }
 
 export function useSmartTrolley() {
@@ -29,6 +31,8 @@ export function useSmartTrolley() {
     paymentMethod: '',
     frameCount: 0,
     isScanning: false,
+    waitingForPlacement: false,
+    lastScannedProduct: null,
   });
 
   const alertIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,21 +62,29 @@ export function useSmartTrolley() {
     soundManager.playScanBeep();
     setState(prev => {
       const existing = prev.cart.find(item => item.id === product.id);
-      if (existing) {
-        return {
-          ...prev,
-          cart: prev.cart.map(item =>
+      const newCart = existing
+        ? prev.cart.map(item =>
             item.id === product.id
               ? { ...item, quantity: item.quantity + 1 }
               : item
-          ),
-        };
-      }
+          )
+        : [...prev.cart, { ...product, quantity: 1 }];
       return {
         ...prev,
-        cart: [...prev.cart, { ...product, quantity: 1 }],
+        cart: newCart,
+        waitingForPlacement: true,
+        lastScannedProduct: product.name,
+        isScanning: false,
       };
     });
+  }, []);
+
+  const confirmPlacement = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      waitingForPlacement: false,
+      lastScannedProduct: null,
+    }));
   }, []);
 
   const updateQuantity = useCallback((productId: string, delta: number) => {
@@ -171,6 +183,8 @@ export function useSmartTrolley() {
       paymentMethod: '',
       frameCount: state.frameCount,
       isScanning: false,
+      waitingForPlacement: false,
+      lastScannedProduct: null,
     });
   }, [state.frameCount]);
 
@@ -195,5 +209,6 @@ export function useSmartTrolley() {
     processPayment,
     resetTransaction,
     setIsScanning,
+    confirmPlacement,
   };
 }
