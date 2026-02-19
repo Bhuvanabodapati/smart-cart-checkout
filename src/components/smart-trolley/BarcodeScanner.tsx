@@ -10,10 +10,9 @@ interface BarcodeScannerProps {
   onScan: (product: Product) => void;
   isScanning: boolean;
   onScanningChange: (scanning: boolean) => void;
-  disabled?: boolean;
 }
 
-export function BarcodeScanner({ onScan, isScanning, onScanningChange, disabled }: BarcodeScannerProps) {
+export function BarcodeScanner({ onScan, isScanning, onScanningChange }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
@@ -74,7 +73,7 @@ export function BarcodeScanner({ onScan, isScanning, onScanningChange, disabled 
     if (product) {
       onScan(product);
       toast.success(`Item scanned and added to cart: ${product.name}`);
-      await stopScanner();
+      // Don't stop scanner - keep scanning continuously
     } else {
       toast.error(`Unknown barcode: ${normalizedBarcode}. Product not in database.`);
     }
@@ -125,7 +124,7 @@ export function BarcodeScanner({ onScan, isScanning, onScanningChange, disabled 
         <div className="flex gap-2">
           <Button 
             onClick={startScanner}
-            disabled={isScanning || disabled}
+            disabled={isScanning}
             className="flex-1"
             size="sm"
           >

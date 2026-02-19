@@ -19,7 +19,7 @@ const Index = () => {
 
       {/* Placement Prompt Overlay */}
       {trolley.waitingForPlacement && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center pointer-events-none">
           <div className="bg-card border border-border rounded-2xl p-8 max-w-sm mx-4 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
               <PackageCheck className="w-8 h-8 text-primary animate-bounce" />
@@ -28,17 +28,9 @@ const Index = () => {
             <p className="text-sm text-muted-foreground mb-1">
               Scanned: <span className="font-semibold text-primary">{trolley.lastScannedProduct}</span>
             </p>
-            <p className="text-xs text-muted-foreground mb-6">
+            <p className="text-xs text-muted-foreground">
               Place the item in the trolley to continue scanning
             </p>
-            <Button 
-              onClick={trolley.confirmPlacement} 
-              className="w-full"
-              size="lg"
-            >
-              <PackageCheck className="w-4 h-4 mr-2" />
-              Item Placed — Continue
-            </Button>
           </div>
         </div>
       )}
@@ -52,7 +44,6 @@ const Index = () => {
               onScan={trolley.addToCart}
               isScanning={trolley.isScanning}
               onScanningChange={trolley.setIsScanning}
-              disabled={trolley.waitingForPlacement}
             />
           </div>
           <div className="flex-1">

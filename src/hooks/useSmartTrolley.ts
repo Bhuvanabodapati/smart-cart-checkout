@@ -58,8 +58,16 @@ export function useSmartTrolley() {
     }));
   }, [state.cart, state.weightMismatch]);
 
+  const placementTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const addToCart = useCallback((product: Product) => {
     soundManager.playScanBeep();
+    
+    // Clear any existing placement timer
+    if (placementTimerRef.current) {
+      clearTimeout(placementTimerRef.current);
+    }
+
     setState(prev => {
       const existing = prev.cart.find(item => item.id === product.id);
       const newCart = existing
@@ -74,9 +82,17 @@ export function useSmartTrolley() {
         cart: newCart,
         waitingForPlacement: true,
         lastScannedProduct: product.name,
-        isScanning: false,
       };
     });
+
+    // Auto-dismiss placement popup after 2 seconds
+    placementTimerRef.current = setTimeout(() => {
+      setState(prev => ({
+        ...prev,
+        waitingForPlacement: false,
+        lastScannedProduct: null,
+      }));
+    }, 2000);
   }, []);
 
   const confirmPlacement = useCallback(() => {
