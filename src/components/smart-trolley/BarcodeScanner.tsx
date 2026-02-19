@@ -32,9 +32,12 @@ export function BarcodeScanner({ onScan, isScanning, onScanningChange, onScanSta
 
       const builtInCamera = videoDevices.find(device => {
         const label = device.label.toLowerCase();
-        const isExternal = label.includes('usb') || label.includes('web cam') ||
-                           label.includes('logitech') || label.includes('c270') ||
-                           label.includes('046d');
+        return label.includes('uvc webcam') || label.includes('hd webcam') ||
+               label.includes('integrated') || label.includes('322e:2012');
+      }) || videoDevices.find(device => {
+        const label = device.label.toLowerCase();
+        const isExternal = label.includes('pc camera') || label.includes('1908:2311') ||
+                           label.includes('logitech') || label.includes('c270');
         return !isExternal;
       }) || videoDevices[0];
 
