@@ -23,11 +23,28 @@ export function BarcodeScanner({ onScan, isScanning, onScanningChange, onScanSta
     if (!containerRef.current || isScanning) return;
 
     try {
+      // Find built-in laptop camera (avoid USB/external)
+      const initialStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      initialStream.getTracks().forEach(track => track.stop());
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+      const builtInCamera = videoDevices.find(device => {
+        const label = device.label.toLowerCase();
+        const isExternal = label.includes('usb') || label.includes('web cam') ||
+                           label.includes('logitech') || label.includes('c270') ||
+                           label.includes('046d');
+        return !isExternal;
+      }) || videoDevices[0];
+
+      const cameraId = builtInCamera?.deviceId;
+
       const scanner = new Html5Qrcode("barcode-reader");
       scannerRef.current = scanner;
 
       await scanner.start(
-        { facingMode: "environment" },
+        cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
         {
           fps: 10,
           qrbox: { width: 200, height: 120 },
