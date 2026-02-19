@@ -41,12 +41,14 @@ export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frame
 
       console.log('Available cameras:', videoDevices.map(d => `${d.label} (${d.deviceId.slice(0, 8)})`));
 
-      // Pick USB/external camera
+      // Pick external USB camera for trolley (prefer "PC CAMERA" over built-in "UVC WebCam")
       const usbCamera = videoDevices.find(device => {
         const label = device.label.toLowerCase();
-        return label.includes('usb') || label.includes('web cam') ||
-               label.includes('logitech') || label.includes('c270') ||
-               label.includes('046d');
+        return label.includes('pc camera') || label.includes('1908:2311');
+      }) || videoDevices.find(device => {
+        const label = device.label.toLowerCase();
+        return (label.includes('logitech') || label.includes('c270') ||
+               label.includes('046d')) ;
       }) || (videoDevices.length > 1 ? videoDevices[videoDevices.length - 1] : undefined);
 
       if (usbCamera) {
