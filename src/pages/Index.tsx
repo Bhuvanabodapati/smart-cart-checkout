@@ -25,11 +25,8 @@ const Index = () => {
               <PackageCheck className="w-8 h-8 text-primary animate-bounce" />
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Place the item in the trolley</h2>
-            <p className="text-sm text-muted-foreground mb-1">
+            <p className="text-sm text-muted-foreground">
               Scanned: <span className="font-semibold text-primary">{trolley.lastScannedProduct}</span>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Place the item in the trolley and re-scan the barcode to confirm
             </p>
           </div>
         </div>
