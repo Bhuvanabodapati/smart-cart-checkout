@@ -57,18 +57,23 @@ export function useSmartTrolley() {
       trolleyWeight: prev.weightMismatch ? prev.trolleyWeight : totalWeight, // Sync if no mismatch
     }));
   }, [state.cart, state.weightMismatch]);
-
-  const placementTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScannedIdRef = useRef<string | null>(null);
 
   const addToCart = useCallback((product: Product) => {
     soundManager.playScanBeep();
-    
-    // Clear any existing placement timer
-    if (placementTimerRef.current) {
-      clearTimeout(placementTimerRef.current);
-    }
 
     setState(prev => {
+      // If waiting for placement and same product is re-scanned, confirm placement
+      if (prev.waitingForPlacement && lastScannedIdRef.current === product.id) {
+        lastScannedIdRef.current = null;
+        return {
+          ...prev,
+          waitingForPlacement: false,
+          lastScannedProduct: null,
+        };
+      }
+
+      // New product scanned — add to cart and wait for placement
       const existing = prev.cart.find(item => item.id === product.id);
       const newCart = existing
         ? prev.cart.map(item =>
@@ -77,6 +82,9 @@ export function useSmartTrolley() {
               : item
           )
         : [...prev.cart, { ...product, quantity: 1 }];
+
+      lastScannedIdRef.current = product.id;
+
       return {
         ...prev,
         cart: newCart,
@@ -84,15 +92,6 @@ export function useSmartTrolley() {
         lastScannedProduct: product.name,
       };
     });
-
-    // Auto-dismiss placement popup after 2 seconds
-    placementTimerRef.current = setTimeout(() => {
-      setState(prev => ({
-        ...prev,
-        waitingForPlacement: false,
-        lastScannedProduct: null,
-      }));
-    }, 2000);
   }, []);
 
   const confirmPlacement = useCallback(() => {
