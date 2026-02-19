@@ -10,9 +10,11 @@ interface BarcodeScannerProps {
   onScan: (product: Product) => void;
   isScanning: boolean;
   onScanningChange: (scanning: boolean) => void;
+  onScanStart?: () => void;
+  onScanStop?: () => void;
 }
 
-export function BarcodeScanner({ onScan, isScanning, onScanningChange }: BarcodeScannerProps) {
+export function BarcodeScanner({ onScan, isScanning, onScanningChange, onScanStart, onScanStop }: BarcodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
@@ -37,6 +39,7 @@ export function BarcodeScanner({ onScan, isScanning, onScanningChange }: Barcode
         () => {}
       );
       onScanningChange(true);
+      onScanStart?.();
       toast.success("Scanner started - point camera at barcode");
     } catch (err) {
       console.error("Failed to start camera:", err);
@@ -50,6 +53,7 @@ export function BarcodeScanner({ onScan, isScanning, onScanningChange }: Barcode
         await scannerRef.current.stop();
         scannerRef.current = null;
         onScanningChange(false);
+        onScanStop?.();
         toast.info("Scanner stopped");
       } catch (err) {
         console.error("Error stopping scanner:", err);

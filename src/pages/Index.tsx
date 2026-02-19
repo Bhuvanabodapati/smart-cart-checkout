@@ -1,16 +1,17 @@
+import { useRef } from 'react';
 import { Header } from '@/components/smart-trolley/Header';
 import { BarcodeScanner } from '@/components/smart-trolley/BarcodeScanner';
-import { CameraFeed } from '@/components/smart-trolley/CameraFeed';
+import { CameraFeed, CameraFeedHandle } from '@/components/smart-trolley/CameraFeed';
 import { ShoppingCartPanel } from '@/components/smart-trolley/ShoppingCartPanel';
 import { WeightSensor } from '@/components/smart-trolley/WeightSensor';
 import { PaymentQR } from '@/components/smart-trolley/PaymentQR';
 import { AlertControls } from '@/components/smart-trolley/AlertControls';
 import { useSmartTrolley } from '@/hooks/useSmartTrolley';
 import { PackageCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const trolley = useSmartTrolley();
+  const cameraRef = useRef<CameraFeedHandle>(null);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
@@ -41,10 +42,13 @@ const Index = () => {
               onScan={trolley.addToCart}
               isScanning={trolley.isScanning}
               onScanningChange={trolley.setIsScanning}
+              onScanStart={() => cameraRef.current?.startCamera()}
+              onScanStop={() => cameraRef.current?.stopCamera()}
             />
           </div>
           <div className="flex-1">
             <CameraFeed 
+              ref={cameraRef}
               frameCount={trolley.frameCount} 
               isMismatch={trolley.cameraMismatch}
               isActive={trolley.isScanning || trolley.waitingForPlacement}

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Camera, AlertTriangle, VideoOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,12 @@ interface CameraFeedProps {
   isActive: boolean;
 }
 
-export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps) {
+export interface CameraFeedHandle {
+  startCamera: () => Promise<void>;
+  stopCamera: () => void;
+}
+
+export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frameCount, isMismatch, isActive }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -22,22 +27,21 @@ export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps
 
   const startCamera = useCallback(async () => {
     try {
-      // Stop any existing stream first
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
 
-      // Get initial stream to populate device labels
+      // First get permission + populate labels
       const initialStream = await navigator.mediaDevices.getUserMedia({ video: true });
       initialStream.getTracks().forEach(track => track.stop());
 
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(d => d.kind === 'videoinput');
-      
-      console.log('Available cameras:', videoDevices.map(d => `${d.label} (${d.deviceId.slice(0,8)})`));
 
-      // Priority: USB/external camera over built-in
+      console.log('Available cameras:', videoDevices.map(d => `${d.label} (${d.deviceId.slice(0, 8)})`));
+
+      // Pick USB/external camera
       const usbCamera = videoDevices.find(device => {
         const label = device.label.toLowerCase();
         return label.includes('usb') || label.includes('web cam') ||
@@ -45,14 +49,18 @@ export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps
                label.includes('046d');
       }) || (videoDevices.length > 1 ? videoDevices[videoDevices.length - 1] : undefined);
 
+      if (usbCamera) {
+        console.log('Selected trolley camera:', usbCamera.label);
+      }
+
       const constraints: MediaStreamConstraints = {
-        video: usbCamera 
+        video: usbCamera
           ? { deviceId: { exact: usbCamera.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
           : { width: { ideal: 1280 }, height: { ideal: 720 } }
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
@@ -72,14 +80,8 @@ export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps
     }
   }, []);
 
-  // Start/stop camera based on isActive prop
-  useEffect(() => {
-    if (isActive) {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-  }, [isActive, startCamera, stopCamera]);
+  // Expose start/stop to parent via ref
+  useImperativeHandle(ref, () => ({ startCamera, stopCamera }), [startCamera, stopCamera]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -89,7 +91,6 @@ export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps
       }
     };
   }, []);
-
   return (
     <Card className={cn(
       "h-full relative overflow-hidden",
@@ -187,4 +188,6 @@ export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps
       </CardContent>
     </Card>
   );
-}
+});
+
+CameraFeed.displayName = 'CameraFeed';
