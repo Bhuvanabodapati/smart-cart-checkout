@@ -27,15 +27,19 @@ export function CameraFeed({ frameCount, isMismatch, isActive }: CameraFeedProps
         streamRef.current.getTracks().forEach(track => track.stop());
       }
 
-      // Find the USB Video Device (046d:0825) - Logitech C270
+      // Find USB webcam - prefer external USB camera over built-in laptop camera
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const usbCamera = devices.find(device => 
-        device.kind === 'videoinput' && 
-        (device.label.includes('046d:0825') || 
-         device.label.toLowerCase().includes('usb video device') ||
-         device.label.toLowerCase().includes('logitech') ||
-         device.label.toLowerCase().includes('c270'))
-      );
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      
+      // Priority: USB Video Device > any external camera > last device (usually external)
+      const usbCamera = videoDevices.find(device => 
+        device.label.toLowerCase().includes('usb video device') ||
+        device.label.toLowerCase().includes('usb camera') ||
+        device.label.toLowerCase().includes('web camera') ||
+        device.label.toLowerCase().includes('logitech') ||
+        device.label.toLowerCase().includes('c270') ||
+        device.label.includes('046d:0825')
+      ) || (videoDevices.length > 1 ? videoDevices[videoDevices.length - 1] : undefined);
 
       const constraints: MediaStreamConstraints = {
         video: usbCamera 
