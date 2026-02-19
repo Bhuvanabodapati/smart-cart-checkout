@@ -71,10 +71,7 @@ const Index = () => {
           </div>
           {/* Alert Controls */}
           <AlertControls
-            cameraMismatch={trolley.cameraMismatch}
             weightMismatch={trolley.weightMismatch}
-            onSimulateCameraMismatch={trolley.simulateCameraMismatch}
-            onStopCameraAlert={trolley.stopCameraAlert}
             onSimulateWeightMismatch={trolley.simulateWeightMismatch}
             onStopWeightAlert={trolley.stopWeightAlert}
           />
