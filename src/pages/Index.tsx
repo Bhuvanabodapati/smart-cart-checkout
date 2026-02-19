@@ -29,7 +29,7 @@ const Index = () => {
               Scanned: <span className="font-semibold text-primary">{trolley.lastScannedProduct}</span>
             </p>
             <p className="text-xs text-muted-foreground">
-              Place the item in the trolley to continue scanning
+              Place the item in the trolley and re-scan the barcode to confirm
             </p>
           </div>
         </div>
