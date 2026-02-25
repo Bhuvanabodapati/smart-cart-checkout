@@ -39,6 +39,9 @@ export const products: Product[] = [
   { id: "P025", name: "Data Bites by Farmley (20g)", weight: 20, price: 40, category: "Snacks", icon: "🥜", barcode: "8906120109918" },
   { id: "P026", name: "Compilers (1Kg)", weight: 1000, price: 339, category: "Books", icon: "📚", barcode: "9789332518667" },
   { id: "P027", name: "Pond's Hyaluronic Super Light Gel (25ml)", weight: 25, price: 64, category: "Personal Care", icon: "🧴", barcode: "8901030702761" },
+  { id: "P028", name: "Pond's Light Moisturizer (200ml)", weight: 200, price: 489, category: "Personal Care", icon: "🧴", barcode: "8901030865411" },
+  { id: "P029", name: "Lacto Calamine Face Lotion (60ml)", weight: 60, price: 195, category: "Personal Care", icon: "🧴", barcode: "8904026636910" },
+  { id: "P030", name: "Aqualogica Avocado Moisturizer (100g)", weight: 100, price: 399, category: "Personal Care", icon: "🧴", barcode: "8904417311884" },
 ];
 
 // Find product by barcode
