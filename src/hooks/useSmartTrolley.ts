@@ -146,7 +146,7 @@ export function useSmartTrolley() {
     setState(prev => ({
       ...prev,
       weightMismatch: true,
-      trolleyWeight: Math.round(prev.scannedWeight * 0.7), // Simulate 30% weight difference
+      trolleyWeight: prev.scannedWeight + 100, // Simulate unscanned 100g item (Aqualogica) in trolley
     }));
     
     alertIntervalRef.current = setInterval(() => {
