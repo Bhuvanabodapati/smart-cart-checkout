@@ -38,6 +38,7 @@ export const products: Product[] = [
   { id: "P024", name: "Sprite (2L)", weight: 2050, price: 95, category: "Beverages", icon: "🥤", barcode: "5449000027559" },
   { id: "P025", name: "Data Bites by Farmley (20g)", weight: 20, price: 40, category: "Snacks", icon: "🥜", barcode: "8906120109918" },
   { id: "P026", name: "Compilers (1Kg)", weight: 1000, price: 339, category: "Books", icon: "📚", barcode: "9789332518667" },
+  { id: "P027", name: "Pond's Hyaluronic Super Light Gel (25ml)", weight: 25, price: 64, category: "Personal Care", icon: "🧴", barcode: "8901030702761" },
 ];
 
 // Find product by barcode
