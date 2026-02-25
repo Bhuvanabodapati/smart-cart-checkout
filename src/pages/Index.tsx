@@ -1,17 +1,33 @@
-import { useRef } from 'react';
+
+import { useRef, useEffect } from 'react';
 import { Header } from '@/components/smart-trolley/Header';
 import { BarcodeScanner } from '@/components/smart-trolley/BarcodeScanner';
 import { CameraFeed, CameraFeedHandle } from '@/components/smart-trolley/CameraFeed';
 import { ShoppingCartPanel } from '@/components/smart-trolley/ShoppingCartPanel';
 import { WeightSensor } from '@/components/smart-trolley/WeightSensor';
 import { PaymentQR } from '@/components/smart-trolley/PaymentQR';
-import { AlertControls } from '@/components/smart-trolley/AlertControls';
 import { useSmartTrolley } from '@/hooks/useSmartTrolley';
 import { PackageCheck } from 'lucide-react';
 
 const Index = () => {
   const trolley = useSmartTrolley();
   const cameraRef = useRef<CameraFeedHandle>(null);
+
+  // Hidden keyboard shortcuts for demo screenshots:
+  // Press 'W' to trigger weight mismatch, 'C' for camera mismatch, 'Escape' to stop all alerts
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'w' || e.key === 'W') trolley.simulateWeightMismatch();
+      if (e.key === 'c' || e.key === 'C') trolley.simulateCameraMismatch();
+      if (e.key === 'Escape') {
+        trolley.stopWeightAlert();
+        trolley.stopCameraAlert();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [trolley]);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-background">
@@ -90,12 +106,6 @@ const Index = () => {
               onReset={trolley.resetTransaction}
             />
           </div>
-          {/* Alert Controls */}
-          <AlertControls
-            weightMismatch={trolley.weightMismatch}
-            onSimulateWeightMismatch={trolley.simulateWeightMismatch}
-            onStopWeightAlert={trolley.stopWeightAlert}
-          />
         </div>
       </main>
     </div>
