@@ -34,20 +34,6 @@ const Index = () => {
       {/* Header */}
       <Header />
 
-      {/* Placement Prompt Overlay */}
-      {trolley.waitingForPlacement && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center pointer-events-none">
-          <div className="bg-card border border-border rounded-2xl p-8 max-w-sm mx-4 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
-              <PackageCheck className="w-8 h-8 text-primary animate-bounce" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Place the item in the trolley</h2>
-            <p className="text-sm text-muted-foreground">
-              Scanned: <span className="font-semibold text-primary">{trolley.lastScannedProduct}</span>
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Main Content - 3 Column Grid */}
       <main className="flex-1 grid grid-cols-4 gap-3 p-3 min-h-0">
