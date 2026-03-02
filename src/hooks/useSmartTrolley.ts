@@ -125,7 +125,11 @@ export function useSmartTrolley() {
 
   const simulateCameraMismatch = useCallback(() => {
     soundManager.playAlertAlarm();
-    setState(prev => ({ ...prev, cameraMismatch: true }));
+    setState(prev => ({
+      ...prev,
+      cameraMismatch: true,
+      waitingForPlacement: true, // Keep camera active to show mismatch overlay
+    }));
     
     // Play repeated alarm
     alertIntervalRef.current = setInterval(() => {

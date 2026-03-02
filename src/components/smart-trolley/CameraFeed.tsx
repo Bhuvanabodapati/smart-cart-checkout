@@ -2,11 +2,16 @@ import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 
 import { Camera, AlertTriangle, VideoOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { YoloDetectionOverlay } from './YoloDetectionOverlay';
 
 interface CameraFeedProps {
   frameCount: number;
   isMismatch: boolean;
   isActive: boolean;
+  lastScannedProduct: string | null;
+  waitingForPlacement: boolean;
+  onMismatchDetected: () => void;
+  onMatchConfirmed: () => void;
 }
 
 export interface CameraFeedHandle {
@@ -14,7 +19,7 @@ export interface CameraFeedHandle {
   stopCamera: () => void;
 }
 
-export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frameCount, isMismatch, isActive }, ref) => {
+export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frameCount, isMismatch, isActive, lastScannedProduct, waitingForPlacement, onMismatchDetected, onMatchConfirmed }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -123,8 +128,17 @@ export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frame
             )}
           />
 
+          {/* YOLOv8 Detection Overlay */}
+          <YoloDetectionOverlay
+            isActive={isActive}
+            lastScannedProduct={lastScannedProduct}
+            waitingForPlacement={waitingForPlacement}
+            onMismatchDetected={onMismatchDetected}
+            onMatchConfirmed={onMatchConfirmed}
+          />
+
           {/* Grid overlay */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="grid grid-cols-3 grid-rows-3 h-full">
               {[...Array(9)].map((_, i) => (
                 <div key={i} className="border border-foreground/10" />
