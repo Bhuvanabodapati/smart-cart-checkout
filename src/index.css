@@ -134,3 +134,12 @@
 .animate-alert-flash {
   animation: alert-flash 0.5s ease-in-out infinite;
 }
+
+@keyframes scan-line {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+.animate-scan-line {
+  animation: scan-line 1.5s ease-in-out infinite;
+}

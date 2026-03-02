@@ -54,6 +54,10 @@ const Index = () => {
               frameCount={trolley.frameCount} 
               isMismatch={trolley.cameraMismatch}
               isActive={trolley.isScanning || trolley.waitingForPlacement}
+              lastScannedProduct={trolley.lastScannedProduct}
+              waitingForPlacement={trolley.waitingForPlacement}
+              onMismatchDetected={trolley.simulateCameraMismatch}
+              onMatchConfirmed={trolley.confirmPlacement}
             />
           </div>
         </div>
