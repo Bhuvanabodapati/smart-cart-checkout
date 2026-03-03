@@ -10,6 +10,7 @@ interface CameraFeedProps {
   isActive: boolean;
   lastScannedProduct: string | null;
   waitingForPlacement: boolean;
+  cameraMismatch: boolean;
   onMismatchDetected: () => void;
   onMatchConfirmed: () => void;
 }
@@ -19,7 +20,7 @@ export interface CameraFeedHandle {
   stopCamera: () => void;
 }
 
-export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frameCount, isMismatch, isActive, lastScannedProduct, waitingForPlacement, onMismatchDetected, onMatchConfirmed }, ref) => {
+export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frameCount, isMismatch, isActive, lastScannedProduct, waitingForPlacement, cameraMismatch, onMismatchDetected, onMatchConfirmed }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -133,6 +134,7 @@ export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frame
             isActive={isActive}
             lastScannedProduct={lastScannedProduct}
             waitingForPlacement={waitingForPlacement}
+            cameraMismatch={cameraMismatch}
             onMismatchDetected={onMismatchDetected}
             onMatchConfirmed={onMatchConfirmed}
           />

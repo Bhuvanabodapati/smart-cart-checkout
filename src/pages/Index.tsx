@@ -56,6 +56,7 @@ const Index = () => {
               isActive={trolley.isScanning || trolley.waitingForPlacement}
               lastScannedProduct={trolley.lastScannedProduct}
               waitingForPlacement={trolley.waitingForPlacement}
+              cameraMismatch={trolley.cameraMismatch}
               onMismatchDetected={trolley.simulateCameraMismatch}
               onMatchConfirmed={trolley.confirmPlacement}
             />
