@@ -12,6 +12,7 @@ interface YoloDetectionOverlayProps {
   isActive: boolean;
   lastScannedProduct: string | null;
   waitingForPlacement: boolean;
+  cameraMismatch: boolean;
   onMismatchDetected: () => void;
   onMatchConfirmed: () => void;
 }
@@ -74,6 +75,7 @@ export function YoloDetectionOverlay({
   isActive,
   lastScannedProduct,
   waitingForPlacement,
+  cameraMismatch,
   onMismatchDetected,
   onMatchConfirmed,
 }: YoloDetectionOverlayProps) {
@@ -82,22 +84,43 @@ export function YoloDetectionOverlay({
   const [modelStatus, setModelStatus] = useState<'idle' | 'loading' | 'running'>('idle');
   const [detectionPhase, setDetectionPhase] = useState<'waiting' | 'detecting' | 'result'>('waiting');
 
-  // Simulate YOLOv8 detection when an item is placed (waitingForPlacement)
+  // Show mismatch detection when cameraMismatch is triggered externally (e.g. pressing 'C')
+  useEffect(() => {
+    if (cameraMismatch && lastScannedProduct) {
+      const expectedLabel = getExpectedDetectionLabel(lastScannedProduct);
+      const wrongLabel = getRandomMismatchLabel(expectedLabel);
+      const confidence = 0.75 + Math.random() * 0.2;
+
+      setDetections([{
+        label: wrongLabel,
+        confidence,
+        bbox: { x: 15 + Math.random() * 20, y: 10 + Math.random() * 15, w: 40 + Math.random() * 20, h: 45 + Math.random() * 20 },
+        matched: false,
+      }]);
+      setInferenceTime(Math.round((18 + Math.random() * 25) * 10) / 10);
+      setDetectionPhase('result');
+      setModelStatus('running');
+    } else if (!cameraMismatch && detections.length > 0 && detections.some(d => !d.matched)) {
+      // Clear mismatch detections when alert is dismissed
+      setDetections([]);
+      setDetectionPhase('waiting');
+    }
+  }, [cameraMismatch, lastScannedProduct]);
+
+  // Simulate YOLOv8 detection when an item is placed (waitingForPlacement) - normal match flow
   const runDetection = useCallback(() => {
-    if (!lastScannedProduct || !waitingForPlacement) return;
+    if (!lastScannedProduct || !waitingForPlacement || cameraMismatch) return;
 
     setModelStatus('running');
     setDetectionPhase('detecting');
     setDetections([]);
 
-    // Simulate inference delay (YOLOv8 nano ~15-30ms on GPU)
     const simInferenceMs = 18 + Math.random() * 25;
 
     setTimeout(() => {
       const expectedLabel = getExpectedDetectionLabel(lastScannedProduct);
-      const confidence = 0.82 + Math.random() * 0.15; // 0.82 - 0.97
+      const confidence = 0.82 + Math.random() * 0.15;
 
-      // Randomize bounding box position slightly
       const bbox = {
         x: 15 + Math.random() * 20,
         y: 10 + Math.random() * 15,
@@ -105,7 +128,6 @@ export function YoloDetectionOverlay({
         h: 45 + Math.random() * 20,
       };
 
-      // Normal case: detected item matches scanned item
       const detected: DetectedObject = {
         label: expectedLabel,
         confidence,
@@ -118,14 +140,13 @@ export function YoloDetectionOverlay({
       setModelStatus('running');
       setDetectionPhase('result');
 
-      // Auto-confirm match after showing detection
       setTimeout(() => {
         onMatchConfirmed();
         setDetectionPhase('waiting');
         setDetections([]);
       }, 2000);
-    }, 800); // Simulate processing time
-  }, [lastScannedProduct, waitingForPlacement, onMatchConfirmed]);
+    }, 800);
+  }, [lastScannedProduct, waitingForPlacement, cameraMismatch, onMatchConfirmed]);
 
   // Trigger detection when waiting for placement
   useEffect(() => {
