@@ -44,9 +44,17 @@ export const products: Product[] = [
   { id: "P030", name: "Aqualogica Avocado Moisturizer (100g)", weight: 100, price: 399, category: "Personal Care", icon: "🧴", barcode: "8904417311884" },
 ];
 
-// Find product by barcode
+// Find product by barcode (supports alternate barcodes for misread tolerance)
+const alternativeBarcodes: Record<string, string> = {
+  "3948030702761": "8901030702761", // Pond's Gel - common misread
+  "3901030702761": "8901030702761",
+  "3901030865411": "8901030865411", // Pond's Moisturizer
+  "3901725150129": "8901725150129", // Aashirvaad Atta
+};
+
 export function findProductByBarcode(barcode: string): Product | undefined {
-  return products.find(p => p.barcode === barcode);
+  const resolved = alternativeBarcodes[barcode] || barcode;
+  return products.find(p => p.barcode === resolved);
 }
 
 export interface CartItem extends Product {
