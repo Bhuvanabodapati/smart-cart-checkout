@@ -107,7 +107,8 @@ export function YoloDetectionOverlay({
     }
   }, [cameraMismatch, lastScannedProduct]);
 
-  // Simulate YOLOv8 detection when an item is placed (waitingForPlacement) - normal match flow
+  // Simulate YOLOv8 detection when an item is placed (waitingForPlacement)
+  // ~25% chance of auto-mismatch to demonstrate the alert system
   const runDetection = useCallback(() => {
     if (!lastScannedProduct || !waitingForPlacement || cameraMismatch) return;
 
@@ -116,10 +117,12 @@ export function YoloDetectionOverlay({
     setDetections([]);
 
     const simInferenceMs = 18 + Math.random() * 25;
+    const isMismatch = Math.random() < 0.25; // 25% chance of mismatch
 
     setTimeout(() => {
       const expectedLabel = getExpectedDetectionLabel(lastScannedProduct);
-      const confidence = 0.82 + Math.random() * 0.15;
+      const detectedLabel = isMismatch ? getRandomMismatchLabel(expectedLabel) : expectedLabel;
+      const confidence = isMismatch ? (0.75 + Math.random() * 0.2) : (0.82 + Math.random() * 0.15);
 
       const bbox = {
         x: 15 + Math.random() * 20,
@@ -129,10 +132,10 @@ export function YoloDetectionOverlay({
       };
 
       const detected: DetectedObject = {
-        label: expectedLabel,
+        label: detectedLabel,
         confidence,
         bbox,
-        matched: true,
+        matched: !isMismatch,
       };
 
       setDetections([detected]);
@@ -140,13 +143,21 @@ export function YoloDetectionOverlay({
       setModelStatus('running');
       setDetectionPhase('result');
 
-      setTimeout(() => {
-        onMatchConfirmed();
-        setDetectionPhase('waiting');
-        setDetections([]);
-      }, 2000);
+      if (isMismatch) {
+        // Auto-trigger camera mismatch alert
+        setTimeout(() => {
+          onMismatchDetected();
+        }, 1000);
+      } else {
+        // Auto-confirm match after showing detection
+        setTimeout(() => {
+          onMatchConfirmed();
+          setDetectionPhase('waiting');
+          setDetections([]);
+        }, 2000);
+      }
     }, 800);
-  }, [lastScannedProduct, waitingForPlacement, cameraMismatch, onMatchConfirmed]);
+  }, [lastScannedProduct, waitingForPlacement, cameraMismatch, onMatchConfirmed, onMismatchDetected]);
 
   // Trigger detection when waiting for placement
   useEffect(() => {
