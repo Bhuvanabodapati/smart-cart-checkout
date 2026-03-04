@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 
 import { Camera, AlertTriangle, VideoOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { YoloDetectionOverlay } from './YoloDetectionOverlay';
+import { MobileNetDetectionOverlay } from './MobileNetDetectionOverlay';
 
 interface CameraFeedProps {
   frameCount: number;
@@ -129,8 +129,8 @@ export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frame
             )}
           />
 
-          {/* YOLOv8 Detection Overlay */}
-          <YoloDetectionOverlay
+          {/* MobileNetV2 Classification Overlay */}
+          <MobileNetDetectionOverlay
             isActive={isActive}
             lastScannedProduct={lastScannedProduct}
             waitingForPlacement={waitingForPlacement}
