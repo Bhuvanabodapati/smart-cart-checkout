@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { soundManager } from '@/utils/sounds';
 
 export interface ClassificationResult {
   label: string;
@@ -26,10 +27,11 @@ const MOBILENET_CLASSES = [
   "Apple", "Banana", "Chips Pack", "Chocolate Bar",
   "Juice Box", "Butter Pack", "Cheese Block", "Tomatoes",
   "Onions", "Potatoes", "Cookie Pack", "Ice Cream Tub",
-  "Data Bites", "Compilers Book",
+  "Data Bites", "Compilers Book", "Pen", "Notebook", "Water Bottle",
+  "Unknown Object",
 ];
 
-// Training dataset info - barcode images + product images per class
+// Training dataset info
 const TRAINING_DATASET: Record<string, { images: number; barcodeImages: number; augmented: number }> = {
   "Aashirvaad Atta": { images: 120, barcodeImages: 15, augmented: 480 },
   "Pillsbury Atta": { images: 95, barcodeImages: 12, augmented: 380 },
@@ -47,18 +49,6 @@ const TRAINING_DATASET: Record<string, { images: number; barcodeImages: number; 
   "Bread Loaf": { images: 55, barcodeImages: 6, augmented: 220 },
   "Rice Bag": { images: 70, barcodeImages: 9, augmented: 280 },
   "Egg Tray": { images: 65, barcodeImages: 7, augmented: 260 },
-  "Apple": { images: 90, barcodeImages: 10, augmented: 360 },
-  "Banana": { images: 85, barcodeImages: 8, augmented: 340 },
-  "Chips Pack": { images: 100, barcodeImages: 12, augmented: 400 },
-  "Chocolate Bar": { images: 110, barcodeImages: 14, augmented: 440 },
-  "Juice Box": { images: 75, barcodeImages: 9, augmented: 300 },
-  "Butter Pack": { images: 60, barcodeImages: 7, augmented: 240 },
-  "Cheese Block": { images: 65, barcodeImages: 8, augmented: 260 },
-  "Tomatoes": { images: 80, barcodeImages: 6, augmented: 320 },
-  "Onions": { images: 75, barcodeImages: 6, augmented: 300 },
-  "Potatoes": { images: 70, barcodeImages: 6, augmented: 280 },
-  "Cookie Pack": { images: 90, barcodeImages: 11, augmented: 360 },
-  "Ice Cream Tub": { images: 85, barcodeImages: 10, augmented: 340 },
   "Data Bites": { images: 50, barcodeImages: 6, augmented: 200 },
   "Compilers Book": { images: 45, barcodeImages: 5, augmented: 180 },
 };
@@ -81,31 +71,14 @@ function getExpectedClassLabel(productName: string): string {
     "Bread": "Bread Loaf",
     "Rice (1kg)": "Rice Bag",
     "Eggs (12pc)": "Egg Tray",
-    "Apple (1kg)": "Apple",
-    "Banana (1dz)": "Banana",
-    "Chips Pack": "Chips Pack",
-    "Chocolate Bar": "Chocolate Bar",
-    "Juice (1L)": "Juice Box",
-    "Butter (500g)": "Butter Pack",
-    "Cheese (200g)": "Cheese Block",
-    "Tomatoes (1kg)": "Tomatoes",
-    "Onions (1kg)": "Onions",
-    "Potatoes (1kg)": "Potatoes",
-    "Cookies Pack": "Cookie Pack",
-    "Ice Cream Feast Vanilla (1L)": "Ice Cream Tub",
     "Data Bites by Farmley (20g)": "Data Bites",
     "Compilers (1Kg)": "Compilers Book",
   };
   return mapping[productName] || productName;
 }
 
-function getRandomMismatchLabel(expectedLabel: string): string {
-  const others = MOBILENET_CLASSES.filter(c => c !== expectedLabel);
-  return others[Math.floor(Math.random() * others.length)];
-}
-
 // Generate top-5 softmax predictions (simulated)
-function generateTop5Predictions(primaryLabel: string, primaryConfidence: number, isMismatch: boolean): { label: string; confidence: number }[] {
+function generateTop5Predictions(primaryLabel: string, primaryConfidence: number): { label: string; confidence: number }[] {
   const others = MOBILENET_CLASSES.filter(c => c !== primaryLabel);
   const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 4);
   
@@ -132,15 +105,29 @@ export function MobileNetDetectionOverlay({
   const [classification, setClassification] = useState<ClassificationResult | null>(null);
   const [inferenceTime, setInferenceTime] = useState(0);
   const [modelStatus, setModelStatus] = useState<'idle' | 'loading' | 'classifying'>('idle');
-  const [detectionPhase, setDetectionPhase] = useState<'waiting' | 'preprocessing' | 'classifying' | 'result'>('waiting');
+  const [detectionPhase, setDetectionPhase] = useState<'waiting' | 'countdown' | 'place_alert' | 'preprocessing' | 'classifying' | 'result'>('waiting');
+  const [countdownSeconds, setCountdownSeconds] = useState(2);
+  const placementTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const classificationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasClassifiedRef = useRef(false);
 
-  // Show mismatch when cameraMismatch is triggered externally (keyboard shortcut)
+  // Cleanup timers
+  useEffect(() => {
+    return () => {
+      if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
+      if (classificationTimerRef.current) clearTimeout(classificationTimerRef.current);
+    };
+  }, []);
+
+  // Handle external mismatch trigger (keyboard shortcut C)
   useEffect(() => {
     if (cameraMismatch && lastScannedProduct) {
       const expectedLabel = getExpectedClassLabel(lastScannedProduct);
-      const wrongLabel = getRandomMismatchLabel(expectedLabel);
+      // Show the detected item as something different from expected
+      const wrongItems = MOBILENET_CLASSES.filter(c => c !== expectedLabel);
+      const wrongLabel = wrongItems[Math.floor(Math.random() * wrongItems.length)];
       const confidence = 0.78 + Math.random() * 0.18;
-      const topPredictions = generateTop5Predictions(wrongLabel, confidence, true);
+      const topPredictions = generateTop5Predictions(wrongLabel, confidence);
 
       setClassification({
         label: wrongLabel,
@@ -152,15 +139,63 @@ export function MobileNetDetectionOverlay({
       setDetectionPhase('result');
       setModelStatus('classifying');
     } else if (!cameraMismatch && classification && !classification.matched) {
+      // Reset after mismatch is cleared
       setClassification(null);
       setDetectionPhase('waiting');
+      hasClassifiedRef.current = false;
     }
   }, [cameraMismatch, lastScannedProduct]);
 
-  // MobileNetV2 classification when item is placed
-  // 25% chance of auto-mismatch
+  // Main flow: After scan → 2s countdown → "Place item" alert → auto classify
+  useEffect(() => {
+    if (waitingForPlacement && lastScannedProduct && isActive && !cameraMismatch) {
+      hasClassifiedRef.current = false;
+      setClassification(null);
+      setDetectionPhase('countdown');
+      setCountdownSeconds(2);
+
+      // Countdown from 2
+      const countdownInterval = setInterval(() => {
+        setCountdownSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // After 2 seconds, show "Place item" alert
+      placementTimerRef.current = setTimeout(() => {
+        setDetectionPhase('place_alert');
+        // Play a gentle alert sound
+        soundManager.playScanBeep();
+
+        // After showing alert for 2 more seconds, auto-run classification
+        // (simulating the customer has now placed the item)
+        classificationTimerRef.current = setTimeout(() => {
+          if (!hasClassifiedRef.current) {
+            runClassification();
+          }
+        }, 2000);
+      }, 2000);
+
+      return () => {
+        clearInterval(countdownInterval);
+        if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
+        if (classificationTimerRef.current) clearTimeout(classificationTimerRef.current);
+      };
+    } else if (!waitingForPlacement && !cameraMismatch) {
+      setDetectionPhase('waiting');
+      setClassification(null);
+      hasClassifiedRef.current = false;
+    }
+  }, [waitingForPlacement, lastScannedProduct, isActive, cameraMismatch]);
+
+  // Run MobileNetV2 classification simulation
   const runClassification = useCallback(() => {
-    if (!lastScannedProduct || !waitingForPlacement || cameraMismatch) return;
+    if (!lastScannedProduct || hasClassifiedRef.current) return;
+    hasClassifiedRef.current = true;
 
     setModelStatus('classifying');
     setDetectionPhase('preprocessing');
@@ -171,47 +206,35 @@ export function MobileNetDetectionOverlay({
       setDetectionPhase('classifying');
 
       const simInferenceMs = 45 + Math.random() * 30; // MobileNetV2 ~45-75ms
-      const isMismatch = Math.random() < 0.25;
 
       // Step 2: Forward pass through MobileNetV2
+      // In simulation: always detect the CORRECT item (matching the scanned product)
+      // Real mismatch only happens via keyboard shortcut C (for demo)
       setTimeout(() => {
         const expectedLabel = getExpectedClassLabel(lastScannedProduct);
-        const detectedLabel = isMismatch ? getRandomMismatchLabel(expectedLabel) : expectedLabel;
-        const confidence = isMismatch ? (0.72 + Math.random() * 0.2) : (0.88 + Math.random() * 0.1);
-        const topPredictions = generateTop5Predictions(detectedLabel, confidence, isMismatch);
+        const confidence = 0.91 + Math.random() * 0.07; // High confidence match
+        const topPredictions = generateTop5Predictions(expectedLabel, confidence);
 
         setClassification({
-          label: detectedLabel,
+          label: expectedLabel,
           confidence,
-          matched: !isMismatch,
+          matched: true,
           topPredictions,
         });
         setInferenceTime(Math.round(simInferenceMs * 10) / 10);
         setModelStatus('classifying');
         setDetectionPhase('result');
 
-        if (isMismatch) {
-          setTimeout(() => {
-            onMismatchDetected();
-          }, 1000);
-        } else {
-          setTimeout(() => {
-            onMatchConfirmed();
-            setDetectionPhase('waiting');
-            setClassification(null);
-          }, 2000);
-        }
+        // Auto-confirm match after showing result for 1.5s
+        setTimeout(() => {
+          onMatchConfirmed();
+          setDetectionPhase('waiting');
+          setClassification(null);
+          hasClassifiedRef.current = false;
+        }, 1500);
       }, 600);
     }, 300);
-  }, [lastScannedProduct, waitingForPlacement, cameraMismatch, onMatchConfirmed, onMismatchDetected]);
-
-  // Trigger classification when waiting for placement
-  useEffect(() => {
-    if (waitingForPlacement && lastScannedProduct && isActive) {
-      const timer = setTimeout(runClassification, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [waitingForPlacement, lastScannedProduct, isActive, runClassification]);
+  }, [lastScannedProduct, onMatchConfirmed]);
 
   // Update model status based on camera activity
   useEffect(() => {
@@ -226,6 +249,7 @@ export function MobileNetDetectionOverlay({
 
   if (!isActive) return null;
 
+  const expectedLabel = lastScannedProduct ? getExpectedClassLabel(lastScannedProduct) : null;
   const datasetInfo = classification ? TRAINING_DATASET[classification.label] : null;
   const totalDatasetImages = Object.values(TRAINING_DATASET).reduce((s, d) => s + d.images + d.barcodeImages + d.augmented, 0);
 
@@ -248,6 +272,34 @@ export function MobileNetDetectionOverlay({
           </span>
         )}
       </div>
+
+      {/* Countdown Phase - Waiting for customer to place item */}
+      {detectionPhase === 'countdown' && lastScannedProduct && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="bg-black/70 text-yellow-400 px-4 py-3 rounded-lg text-xs font-mono flex flex-col items-center gap-2">
+            <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-bold">Waiting for placement...</span>
+            <span className="text-yellow-300/80">Scanned: {lastScannedProduct}</span>
+            <span className="text-lg font-bold">{countdownSeconds}s</span>
+          </div>
+        </div>
+      )}
+
+      {/* Place Item Alert */}
+      {detectionPhase === 'place_alert' && lastScannedProduct && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="bg-black/80 border-2 border-yellow-500 text-yellow-400 px-5 py-4 rounded-lg text-xs font-mono flex flex-col items-center gap-2 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span className="text-sm font-bold text-yellow-300">⚠ Place the item in trolley</span>
+            <span className="text-yellow-200/90 text-center font-semibold">{lastScannedProduct}</span>
+            <span className="text-[10px] text-yellow-400/60 mt-1">MobileNetV2 will auto-detect upon placement</span>
+          </div>
+        </div>
+      )}
 
       {/* Preprocessing Phase */}
       {detectionPhase === 'preprocessing' && (
@@ -279,7 +331,7 @@ export function MobileNetDetectionOverlay({
         </div>
       )}
 
-      {/* Classification Result - Full frame highlight instead of bounding box */}
+      {/* Classification Result */}
       {classification && detectionPhase === 'result' && (
         <>
           {/* Frame border indicator */}
@@ -287,7 +339,6 @@ export function MobileNetDetectionOverlay({
             "absolute inset-2 border-2 rounded-lg",
             classification.matched ? "border-green-400/60" : "border-red-500/60"
           )}>
-            {/* Corner markers */}
             <div className={cn("absolute -top-0.5 -left-0.5 w-5 h-5 border-t-3 border-l-3 rounded-tl", classification.matched ? "border-green-400" : "border-red-500")} />
             <div className={cn("absolute -top-0.5 -right-0.5 w-5 h-5 border-t-3 border-r-3 rounded-tr", classification.matched ? "border-green-400" : "border-red-500")} />
             <div className={cn("absolute -bottom-0.5 -left-0.5 w-5 h-5 border-b-3 border-l-3 rounded-bl", classification.matched ? "border-green-400" : "border-red-500")} />
@@ -307,7 +358,10 @@ export function MobileNetDetectionOverlay({
             "absolute top-20 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[10px] font-mono font-bold z-20",
             classification.matched ? "bg-green-500/80 text-black" : "bg-red-500/80 text-white animate-pulse"
           )}>
-            {classification.matched ? "VERIFIED — Item matches scanned barcode" : "ALERT — Item does NOT match scanned barcode"}
+            {classification.matched 
+              ? `VERIFIED — Matches scanned: ${expectedLabel}` 
+              : `MISMATCH — Expected: ${expectedLabel} | Detected: ${classification.label}`
+            }
           </div>
 
           {/* Top-5 Predictions panel */}
