@@ -19,7 +19,6 @@ const Index = () => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'w' || e.key === 'W') trolley.simulateWeightMismatch();
-      if (e.key === 'c' || e.key === 'C') trolley.simulateCameraMismatch();
       if (e.key === 'Escape') {
         trolley.stopWeightAlert();
         trolley.stopCameraAlert();

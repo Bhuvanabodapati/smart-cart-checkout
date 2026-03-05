@@ -107,49 +107,34 @@ export function MobileNetDetectionOverlay({
   const [modelStatus, setModelStatus] = useState<'idle' | 'loading' | 'classifying'>('idle');
   const [detectionPhase, setDetectionPhase] = useState<'waiting' | 'countdown' | 'place_alert' | 'preprocessing' | 'classifying' | 'result'>('waiting');
   const [countdownSeconds, setCountdownSeconds] = useState(2);
+  const [itemPlaced, setItemPlaced] = useState(false);
   const placementTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const classificationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasClassifiedRef = useRef(false);
+  const alertSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup timers
   useEffect(() => {
     return () => {
       if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
-      if (classificationTimerRef.current) clearTimeout(classificationTimerRef.current);
+      if (alertSoundIntervalRef.current) clearInterval(alertSoundIntervalRef.current);
     };
   }, []);
 
-  // Handle external mismatch trigger (keyboard shortcut C)
+  // Reset when mismatch is cleared externally
   useEffect(() => {
-    if (cameraMismatch && lastScannedProduct) {
-      const expectedLabel = getExpectedClassLabel(lastScannedProduct);
-      // Show the detected item as something different from expected
-      const wrongItems = MOBILENET_CLASSES.filter(c => c !== expectedLabel);
-      const wrongLabel = wrongItems[Math.floor(Math.random() * wrongItems.length)];
-      const confidence = 0.78 + Math.random() * 0.18;
-      const topPredictions = generateTop5Predictions(wrongLabel, confidence);
-
-      setClassification({
-        label: wrongLabel,
-        confidence,
-        matched: false,
-        topPredictions,
-      });
-      setInferenceTime(Math.round((45 + Math.random() * 30) * 10) / 10);
-      setDetectionPhase('result');
-      setModelStatus('classifying');
-    } else if (!cameraMismatch && classification && !classification.matched) {
-      // Reset after mismatch is cleared
+    if (!cameraMismatch && classification && !classification.matched) {
       setClassification(null);
       setDetectionPhase('waiting');
+      setItemPlaced(false);
       hasClassifiedRef.current = false;
     }
-  }, [cameraMismatch, lastScannedProduct]);
+  }, [cameraMismatch]);
 
-  // Main flow: After scan → 2s countdown → "Place item" alert → auto classify
+  // Main flow: After scan → 2s countdown → persistent "Place item" alert (waits indefinitely)
   useEffect(() => {
     if (waitingForPlacement && lastScannedProduct && isActive && !cameraMismatch) {
       hasClassifiedRef.current = false;
+      setItemPlaced(false);
       setClassification(null);
       setDetectionPhase('countdown');
       setCountdownSeconds(2);
@@ -165,32 +150,41 @@ export function MobileNetDetectionOverlay({
         });
       }, 1000);
 
-      // After 2 seconds, show "Place item" alert
+      // After 2 seconds, show persistent "Place item" alert
       placementTimerRef.current = setTimeout(() => {
         setDetectionPhase('place_alert');
-        // Play a gentle alert sound
         soundManager.playScanBeep();
-
-        // After showing alert for 2 more seconds, auto-run classification
-        // (simulating the customer has now placed the item)
-        classificationTimerRef.current = setTimeout(() => {
-          if (!hasClassifiedRef.current) {
-            runClassification();
-          }
-        }, 2000);
+        // Repeat alert sound every 5 seconds while waiting
+        alertSoundIntervalRef.current = setInterval(() => {
+          soundManager.playScanBeep();
+        }, 5000);
       }, 2000);
 
       return () => {
         clearInterval(countdownInterval);
         if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
-        if (classificationTimerRef.current) clearTimeout(classificationTimerRef.current);
+        if (alertSoundIntervalRef.current) {
+          clearInterval(alertSoundIntervalRef.current);
+          alertSoundIntervalRef.current = null;
+        }
       };
     } else if (!waitingForPlacement && !cameraMismatch) {
       setDetectionPhase('waiting');
       setClassification(null);
+      setItemPlaced(false);
       hasClassifiedRef.current = false;
     }
   }, [waitingForPlacement, lastScannedProduct, isActive, cameraMismatch]);
+
+  // When customer confirms placement, run classification
+  const handleItemPlaced = useCallback(() => {
+    if (alertSoundIntervalRef.current) {
+      clearInterval(alertSoundIntervalRef.current);
+      alertSoundIntervalRef.current = null;
+    }
+    setItemPlaced(true);
+    runClassification();
+  }, [lastScannedProduct]);
 
   // Run MobileNetV2 classification simulation
   const runClassification = useCallback(() => {
@@ -208,33 +202,61 @@ export function MobileNetDetectionOverlay({
       const simInferenceMs = 45 + Math.random() * 30; // MobileNetV2 ~45-75ms
 
       // Step 2: Forward pass through MobileNetV2
-      // In simulation: always detect the CORRECT item (matching the scanned product)
-      // Real mismatch only happens via keyboard shortcut C (for demo)
+      // Simulated detection — randomly decides if the placed item matches (85% match, 15% mismatch)
+      // In a real system, the webcam feed would be analyzed by MobileNetV2
       setTimeout(() => {
         const expectedLabel = getExpectedClassLabel(lastScannedProduct);
-        const confidence = 0.91 + Math.random() * 0.07; // High confidence match
-        const topPredictions = generateTop5Predictions(expectedLabel, confidence);
+        const isMismatch = Math.random() < 0.15; // 15% chance of mismatch to simulate real detection
 
-        setClassification({
-          label: expectedLabel,
-          confidence,
-          matched: true,
-          topPredictions,
-        });
-        setInferenceTime(Math.round(simInferenceMs * 10) / 10);
-        setModelStatus('classifying');
-        setDetectionPhase('result');
+        if (isMismatch) {
+          // Detected a different item than what was scanned
+          const wrongItems = MOBILENET_CLASSES.filter(c => c !== expectedLabel && c !== "Unknown Object");
+          const wrongLabel = wrongItems[Math.floor(Math.random() * wrongItems.length)];
+          const confidence = 0.72 + Math.random() * 0.2;
+          const topPredictions = generateTop5Predictions(wrongLabel, confidence);
 
-        // Auto-confirm match after showing result for 1.5s
-        setTimeout(() => {
-          onMatchConfirmed();
-          setDetectionPhase('waiting');
-          setClassification(null);
-          hasClassifiedRef.current = false;
-        }, 1500);
+          setClassification({
+            label: wrongLabel,
+            confidence,
+            matched: false,
+            topPredictions,
+          });
+          setInferenceTime(Math.round(simInferenceMs * 10) / 10);
+          setModelStatus('classifying');
+          setDetectionPhase('result');
+
+          // Trigger mismatch alert with sound automatically
+          soundManager.playAlertAlarm();
+          setTimeout(() => {
+            onMismatchDetected();
+          }, 500);
+        } else {
+          // Matched — correct item detected
+          const confidence = 0.91 + Math.random() * 0.07;
+          const topPredictions = generateTop5Predictions(expectedLabel, confidence);
+
+          setClassification({
+            label: expectedLabel,
+            confidence,
+            matched: true,
+            topPredictions,
+          });
+          setInferenceTime(Math.round(simInferenceMs * 10) / 10);
+          setModelStatus('classifying');
+          setDetectionPhase('result');
+
+          // Auto-confirm match after showing result for 1.5s
+          setTimeout(() => {
+            onMatchConfirmed();
+            setDetectionPhase('waiting');
+            setClassification(null);
+            setItemPlaced(false);
+            hasClassifiedRef.current = false;
+          }, 1500);
+        }
       }, 600);
     }, 300);
-  }, [lastScannedProduct, onMatchConfirmed]);
+  }, [lastScannedProduct, onMatchConfirmed, onMismatchDetected]);
 
   // Update model status based on camera activity
   useEffect(() => {
@@ -285,18 +307,25 @@ export function MobileNetDetectionOverlay({
         </div>
       )}
 
-      {/* Place Item Alert */}
+      {/* Persistent Place Item Alert — stays until customer confirms placement */}
       {detectionPhase === 'place_alert' && lastScannedProduct && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="bg-black/80 border-2 border-yellow-500 text-yellow-400 px-5 py-4 rounded-lg text-xs font-mono flex flex-col items-center gap-2 animate-pulse">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+          <div className="bg-black/80 border-2 border-yellow-500 text-yellow-400 px-5 py-4 rounded-lg text-xs font-mono flex flex-col items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-yellow-500 animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
               <line x1="12" y1="9" x2="12" y2="13"/>
               <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
             <span className="text-sm font-bold text-yellow-300">⚠ Place the item in trolley</span>
-            <span className="text-yellow-200/90 text-center font-semibold">{lastScannedProduct}</span>
-            <span className="text-[10px] text-yellow-400/60 mt-1">MobileNetV2 will auto-detect upon placement</span>
+            <span className="text-yellow-200/90 text-center font-semibold text-base">{lastScannedProduct}</span>
+            <span className="text-[10px] text-yellow-400/60">Waiting for item placement...</span>
+            <button
+              onClick={handleItemPlaced}
+              className="mt-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg transition-colors"
+            >
+              ✓ Item Placed in Trolley
+            </button>
+            <span className="text-[9px] text-yellow-400/40 mt-1">MobileNetV2 will verify after placement</span>
           </div>
         </div>
       )}
