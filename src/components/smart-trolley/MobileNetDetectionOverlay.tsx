@@ -111,6 +111,7 @@ export function MobileNetDetectionOverlay({
   const placementTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasClassifiedRef = useRef(false);
   const alertSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoDetectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup timers
   useEffect(() => {
