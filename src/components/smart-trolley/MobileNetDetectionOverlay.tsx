@@ -193,16 +193,6 @@ export function MobileNetDetectionOverlay({
     }
   }, [waitingForPlacement, lastScannedProduct, isActive, cameraMismatch]);
 
-  // When customer confirms placement, run classification
-  const handleItemPlaced = useCallback(() => {
-    if (alertSoundIntervalRef.current) {
-      clearInterval(alertSoundIntervalRef.current);
-      alertSoundIntervalRef.current = null;
-    }
-    setItemPlaced(true);
-    runClassification();
-  }, [lastScannedProduct]);
-
   // Run MobileNetV2 classification simulation
   const runClassification = useCallback(() => {
     if (!lastScannedProduct || hasClassifiedRef.current) return;
