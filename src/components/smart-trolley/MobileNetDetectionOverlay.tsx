@@ -130,7 +130,7 @@ export function MobileNetDetectionOverlay({
     }
   }, [cameraMismatch]);
 
-  // Main flow: After scan → 2s countdown → persistent "Place item" alert (waits indefinitely)
+  // Main flow: After scan → 2s countdown → "Place item" alert → auto-detect after 3s
   useEffect(() => {
     if (waitingForPlacement && lastScannedProduct && isActive && !cameraMismatch) {
       hasClassifiedRef.current = false;
@@ -150,7 +150,7 @@ export function MobileNetDetectionOverlay({
         });
       }, 1000);
 
-      // After 2 seconds, show persistent "Place item" alert
+      // After 2 seconds, show "Place item" alert
       placementTimerRef.current = setTimeout(() => {
         setDetectionPhase('place_alert');
         soundManager.playScanBeep();
@@ -158,6 +158,17 @@ export function MobileNetDetectionOverlay({
         alertSoundIntervalRef.current = setInterval(() => {
           soundManager.playScanBeep();
         }, 5000);
+
+        // Auto-detect placement after 3 seconds of showing the alert
+        // (simulates camera detecting item being placed in trolley)
+        autoDetectTimerRef.current = setTimeout(() => {
+          if (alertSoundIntervalRef.current) {
+            clearInterval(alertSoundIntervalRef.current);
+            alertSoundIntervalRef.current = null;
+          }
+          setItemPlaced(true);
+          runClassification();
+        }, 3000);
       }, 2000);
 
       return () => {
@@ -166,6 +177,10 @@ export function MobileNetDetectionOverlay({
         if (alertSoundIntervalRef.current) {
           clearInterval(alertSoundIntervalRef.current);
           alertSoundIntervalRef.current = null;
+        }
+        if (autoDetectTimerRef.current) {
+          clearTimeout(autoDetectTimerRef.current);
+          autoDetectTimerRef.current = null;
         }
       };
     } else if (!waitingForPlacement && !cameraMismatch) {
