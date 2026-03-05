@@ -111,12 +111,14 @@ export function MobileNetDetectionOverlay({
   const placementTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasClassifiedRef = useRef(false);
   const alertSoundIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const autoDetectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup timers
   useEffect(() => {
     return () => {
       if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
       if (alertSoundIntervalRef.current) clearInterval(alertSoundIntervalRef.current);
+      if (autoDetectTimerRef.current) clearTimeout(autoDetectTimerRef.current);
     };
   }, []);
 
@@ -130,7 +132,7 @@ export function MobileNetDetectionOverlay({
     }
   }, [cameraMismatch]);
 
-  // Main flow: After scan → 2s countdown → persistent "Place item" alert (waits indefinitely)
+  // Main flow: After scan → 2s countdown → "Place item" alert → auto-detect after 3s
   useEffect(() => {
     if (waitingForPlacement && lastScannedProduct && isActive && !cameraMismatch) {
       hasClassifiedRef.current = false;
@@ -150,7 +152,7 @@ export function MobileNetDetectionOverlay({
         });
       }, 1000);
 
-      // After 2 seconds, show persistent "Place item" alert
+      // After 2 seconds, show "Place item" alert
       placementTimerRef.current = setTimeout(() => {
         setDetectionPhase('place_alert');
         soundManager.playScanBeep();
@@ -158,6 +160,17 @@ export function MobileNetDetectionOverlay({
         alertSoundIntervalRef.current = setInterval(() => {
           soundManager.playScanBeep();
         }, 5000);
+
+        // Auto-detect placement after 3 seconds of showing the alert
+        // (simulates camera detecting item being placed in trolley)
+        autoDetectTimerRef.current = setTimeout(() => {
+          if (alertSoundIntervalRef.current) {
+            clearInterval(alertSoundIntervalRef.current);
+            alertSoundIntervalRef.current = null;
+          }
+          setItemPlaced(true);
+          runClassification();
+        }, 3000);
       }, 2000);
 
       return () => {
@@ -167,6 +180,10 @@ export function MobileNetDetectionOverlay({
           clearInterval(alertSoundIntervalRef.current);
           alertSoundIntervalRef.current = null;
         }
+        if (autoDetectTimerRef.current) {
+          clearTimeout(autoDetectTimerRef.current);
+          autoDetectTimerRef.current = null;
+        }
       };
     } else if (!waitingForPlacement && !cameraMismatch) {
       setDetectionPhase('waiting');
@@ -175,16 +192,6 @@ export function MobileNetDetectionOverlay({
       hasClassifiedRef.current = false;
     }
   }, [waitingForPlacement, lastScannedProduct, isActive, cameraMismatch]);
-
-  // When customer confirms placement, run classification
-  const handleItemPlaced = useCallback(() => {
-    if (alertSoundIntervalRef.current) {
-      clearInterval(alertSoundIntervalRef.current);
-      alertSoundIntervalRef.current = null;
-    }
-    setItemPlaced(true);
-    runClassification();
-  }, [lastScannedProduct]);
 
   // Run MobileNetV2 classification simulation
   const runClassification = useCallback(() => {
@@ -307,9 +314,9 @@ export function MobileNetDetectionOverlay({
         </div>
       )}
 
-      {/* Persistent Place Item Alert — stays until customer confirms placement */}
+      {/* Place Item Alert — auto-detects placement after a few seconds */}
       {detectionPhase === 'place_alert' && lastScannedProduct && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="bg-black/80 border-2 border-yellow-500 text-yellow-400 px-5 py-4 rounded-lg text-xs font-mono flex flex-col items-center gap-3">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-yellow-500 animate-bounce" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -318,14 +325,11 @@ export function MobileNetDetectionOverlay({
             </svg>
             <span className="text-sm font-bold text-yellow-300">⚠ Place the item in trolley</span>
             <span className="text-yellow-200/90 text-center font-semibold text-base">{lastScannedProduct}</span>
-            <span className="text-[10px] text-yellow-400/60">Waiting for item placement...</span>
-            <button
-              onClick={handleItemPlaced}
-              className="mt-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-lg transition-colors"
-            >
-              ✓ Item Placed in Trolley
-            </button>
-            <span className="text-[9px] text-yellow-400/40 mt-1">MobileNetV2 will verify after placement</span>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+              <span className="text-[10px] text-yellow-400/60">Camera monitoring trolley for item placement...</span>
+            </div>
+            <span className="text-[9px] text-yellow-400/40 mt-1">MobileNetV2 auto-detects when item is placed</span>
           </div>
         </div>
       )}
