@@ -118,6 +118,7 @@ export function MobileNetDetectionOverlay({
     return () => {
       if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
       if (alertSoundIntervalRef.current) clearInterval(alertSoundIntervalRef.current);
+      if (autoDetectTimerRef.current) clearTimeout(autoDetectTimerRef.current);
     };
   }, []);
 
