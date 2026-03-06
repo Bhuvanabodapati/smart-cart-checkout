@@ -137,6 +137,7 @@ export const CameraFeed = forwardRef<CameraFeedHandle, CameraFeedProps>(({ frame
             cameraMismatch={cameraMismatch}
             onMismatchDetected={onMismatchDetected}
             onMatchConfirmed={onMatchConfirmed}
+            videoRef={videoRef}
           />
 
           {/* Grid overlay */}
