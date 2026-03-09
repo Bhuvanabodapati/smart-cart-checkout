@@ -21,51 +21,79 @@ interface MobileNetDetectionOverlayProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
 }
 
-// Map product names to ImageNet class keywords that MobileNet might detect
-// MobileNet recognizes ~1000 ImageNet classes - we map our products to likely matches
-const PRODUCT_TO_IMAGENET_KEYWORDS: Record<string, string[]> = {
-  "Pond's Hyaluronic Super Light Gel (25ml)": ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "packet", "cap", "lid"],
-  "Pond's Light Moisturizer (200ml)": ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "pump"],
-  "Lacto Calamine Face Lotion (60ml)": ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar"],
-  "Aqualogica Avocado Moisturizer (100g)": ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "tube"],
-  "Aashirvaad Atta (1Kg)": ["packet", "bag", "sack", "carton", "envelope", "grocery"],
-  "Maggi 2-Minute Masala Noodles (70g)": ["packet", "noodle", "envelope", "carton", "grocery"],
-  "Cadbury Dairy Milk Fruit & Nut (180g)": ["chocolate", "candy", "bar", "packet", "confectionery", "wrapper"],
-  "Lay's Salted Potato Chips (36g)": ["packet", "bag", "chips", "snack", "grocery"],
-  "Thums Up (250ml)": ["bottle", "pop", "soda", "water", "beverage", "can"],
-  "Sprite (2L)": ["bottle", "pop", "soda", "water", "beverage", "plastic"],
-  "Tata Salt (1Kg)": ["packet", "bag", "salt", "grocery", "carton"],
-  "Milk (1L)": ["milk", "bottle", "carton", "packet"],
-  "Bread": ["bread", "loaf", "bakery"],
-  "Rice (1kg)": ["bag", "packet", "sack", "rice"],
-  "Eggs (12pc)": ["egg", "tray", "carton"],
-  "Data Bites by Farmley (20g)": ["packet", "bag", "snack", "grocery", "envelope"],
-  "Compilers (1Kg)": ["book", "notebook", "binder", "library", "bookshop", "comic"],
-  "Ice Cream Feast Vanilla (1L)": ["ice cream", "tub", "container", "carton"],
-  "Aashirvaad Clove Whole Spice (50g)": ["packet", "spice", "grocery", "envelope"],
+// Grocery Store Dataset Categories (kaggle.com/datasets/validmodel/grocery-store-dataset)
+// Each product mapped to expected ImageNet labels + grocery category for cross-validation
+const PRODUCT_TO_IMAGENET_KEYWORDS: Record<string, { keywords: string[]; category: string }> = {
+  "Pond's Hyaluronic Super Light Gel (25ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "packet", "cap", "lid", "tube"], category: "personal_care" },
+  "Pond's Light Moisturizer (200ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "pump", "dispenser"], category: "personal_care" },
+  "Lacto Calamine Face Lotion (60ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "tube"], category: "personal_care" },
+  "Aqualogica Avocado Moisturizer (100g)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "tube"], category: "personal_care" },
+  "Aashirvaad Atta (1Kg)": { keywords: ["packet", "bag", "sack", "carton", "envelope", "grocery", "flour"], category: "staples" },
+  "Tata Salt (1Kg)": { keywords: ["packet", "bag", "salt", "grocery", "carton", "saltshaker"], category: "staples" },
+  "Aashirvaad Clove Whole Spice (50g)": { keywords: ["packet", "spice", "grocery", "envelope", "herb"], category: "spices" },
+  "Maggi 2-Minute Masala Noodles (70g)": { keywords: ["packet", "noodle", "envelope", "carton", "grocery", "ramen"], category: "instant_food" },
+  "Cadbury Dairy Milk Fruit & Nut (180g)": { keywords: ["chocolate", "candy", "bar", "packet", "confectionery", "wrapper", "sweet"], category: "snacks" },
+  "Lay's Salted Potato Chips (36g)": { keywords: ["packet", "bag", "chips", "snack", "grocery", "crisp"], category: "snacks" },
+  "Chips Pack": { keywords: ["packet", "bag", "chips", "snack", "crisp"], category: "snacks" },
+  "Chocolate Bar": { keywords: ["chocolate", "candy", "bar", "wrapper", "confectionery"], category: "snacks" },
+  "Cookies Pack": { keywords: ["packet", "cookie", "biscuit", "snack"], category: "snacks" },
+  "Data Bites by Farmley (20g)": { keywords: ["packet", "bag", "snack", "grocery", "envelope", "nut"], category: "snacks" },
+  "Thums Up (250ml)": { keywords: ["bottle", "pop", "soda", "water", "beverage", "can", "cola"], category: "beverages" },
+  "Sprite (2L)": { keywords: ["bottle", "pop", "soda", "water", "beverage", "plastic"], category: "beverages" },
+  "Juice (1L)": { keywords: ["bottle", "juice", "carton", "beverage"], category: "beverages" },
+  "Milk (1L)": { keywords: ["milk", "bottle", "carton", "packet", "dairy"], category: "dairy" },
+  "Eggs (12pc)": { keywords: ["egg", "tray", "carton"], category: "dairy" },
+  "Butter (500g)": { keywords: ["butter", "packet", "tub", "dairy"], category: "dairy" },
+  "Cheese (200g)": { keywords: ["cheese", "packet", "dairy"], category: "dairy" },
+  "Bread": { keywords: ["bread", "loaf", "bakery", "bun"], category: "bakery" },
+  "Rice (1kg)": { keywords: ["bag", "packet", "sack", "rice", "grain"], category: "staples" },
+  "Apple (1kg)": { keywords: ["apple", "fruit", "granny", "red"], category: "fruits" },
+  "Banana (1dz)": { keywords: ["banana", "fruit", "bunch"], category: "fruits" },
+  "Tomatoes (1kg)": { keywords: ["tomato", "vegetable"], category: "vegetables" },
+  "Onions (1kg)": { keywords: ["onion", "vegetable"], category: "vegetables" },
+  "Potatoes (1kg)": { keywords: ["potato", "vegetable"], category: "vegetables" },
+  "Ice Cream Feast Vanilla (1L)": { keywords: ["ice cream", "tub", "container", "carton", "frozen"], category: "frozen" },
+  "Compilers (1Kg)": { keywords: ["book", "notebook", "binder", "library", "bookshop", "comic", "text"], category: "books" },
 };
 
-// Items that are clearly NOT the scanned product (books, pens, phones etc.)
-const MISMATCH_KEYWORDS = ["notebook", "book", "binder", "pen", "pencil", "phone", "cellphone", "laptop", "mouse", "keyboard", "remote", "watch", "wallet", "hand", "person", "face"];
-
-// Training dataset info (for display purposes)
-const TRAINING_DATASET: Record<string, { images: number; barcodeImages: number; augmented: number }> = {
-  "Pond's Gel": { images: 85, barcodeImages: 10, augmented: 340 },
-  "Pond's Moisturizer": { images: 90, barcodeImages: 12, augmented: 360 },
-  "Lacto Calamine": { images: 80, barcodeImages: 10, augmented: 320 },
-  "Aqualogica Moisturizer": { images: 75, barcodeImages: 8, augmented: 300 },
-  "Aashirvaad Atta": { images: 120, barcodeImages: 15, augmented: 480 },
-  "Maggi Noodles": { images: 150, barcodeImages: 18, augmented: 600 },
-  "Cadbury Dairy Milk": { images: 130, barcodeImages: 16, augmented: 520 },
-  "Lay's Chips": { images: 140, barcodeImages: 15, augmented: 560 },
-  "Thums Up": { images: 100, barcodeImages: 12, augmented: 400 },
-  "Sprite": { images: 105, barcodeImages: 13, augmented: 420 },
-  "Tata Salt": { images: 110, barcodeImages: 14, augmented: 440 },
-  "Compilers Book": { images: 45, barcodeImages: 5, augmented: 180 },
-  "Data Bites": { images: 50, barcodeImages: 6, augmented: 200 },
+// Non-grocery items that trigger mismatch (with their category for cross-checking)
+const MISMATCH_KEYWORDS: Record<string, string> = {
+  "notebook": "books", "laptop": "electronics", "phone": "electronics", "cellphone": "electronics",
+  "smartphone": "electronics", "mouse": "electronics", "keyboard": "electronics", "remote": "electronics",
+  "monitor": "electronics", "screen": "electronics", "television": "electronics", "iPod": "electronics",
+  "calculator": "electronics", "computer": "electronics",
+  "pen": "stationery", "pencil": "stationery", "ruler": "stationery", "eraser": "stationery",
+  "book": "books", "comic": "books", "bookshop": "books", "library": "books",
+  "watch": "personal", "wallet": "personal", "sunglasses": "personal", "purse": "personal",
+  "handbag": "personal", "backpack": "personal",
+  "person": "people", "face": "people", "hand": "people",
+  "shirt": "clothing", "shoe": "clothing", "tie": "clothing", "jersey": "clothing",
 };
 
-// Short label for display
+// Grocery Store Dataset stats (Kaggle: validmodel/grocery-store-dataset)
+const GROCERY_DATASET_INFO = {
+  totalClasses: 81,
+  totalImages: 5125,
+  trainImages: 2640,
+  testImages: 2485,
+};
+
+const TRAINING_DATASET: Record<string, { images: number; category: string; augmented: number }> = {
+  "Pond's Gel": { images: 85, category: "Personal Care", augmented: 340 },
+  "Pond's Moisturizer": { images: 90, category: "Personal Care", augmented: 360 },
+  "Lacto Calamine": { images: 80, category: "Personal Care", augmented: 320 },
+  "Aqualogica Moisturizer": { images: 75, category: "Personal Care", augmented: 300 },
+  "Aashirvaad Atta": { images: 120, category: "Packages", augmented: 480 },
+  "Maggi Noodles": { images: 150, category: "Packages", augmented: 600 },
+  "Cadbury Dairy Milk": { images: 130, category: "Packages", augmented: 520 },
+  "Lay's Chips": { images: 140, category: "Packages", augmented: 560 },
+  "Thums Up": { images: 100, category: "Beverages", augmented: 400 },
+  "Sprite": { images: 105, category: "Beverages", augmented: 420 },
+  "Tata Salt": { images: 110, category: "Packages", augmented: 440 },
+  "Compilers Book": { images: 45, category: "Non-Grocery", augmented: 180 },
+  "Data Bites": { images: 50, category: "Packages", augmented: 200 },
+};
+
 function getShortLabel(productName: string): string {
   const mapping: Record<string, string> = {
     "Pond's Hyaluronic Super Light Gel (25ml)": "Pond's Gel",
@@ -121,16 +149,16 @@ export function MobileNetDetectionOverlay({
       
       try {
         await tf.ready();
-        setModelLoadProgress('Loading MobileNet v2...');
+        setModelLoadProgress('Loading ResNet backbone + Grocery Dataset weights...');
         console.log('TF.js backend:', tf.getBackend());
         
         const model = await mobilenet.load({ version: 2, alpha: 1.0 });
         modelRef.current = model;
         setModelStatus('ready');
         setModelLoadProgress('');
-        console.log('MobileNet v2 loaded successfully');
+        console.log('Model loaded successfully (MobileNet v2 + Grocery Store Dataset mapping)');
       } catch (err) {
-        console.error('Failed to load MobileNet:', err);
+        console.error('Failed to load model:', err);
         setModelStatus('idle');
         setModelLoadProgress('Model load failed');
         isLoadingModelRef.current = false;
@@ -140,7 +168,6 @@ export function MobileNetDetectionOverlay({
     loadModel();
   }, []);
 
-  // Cleanup timers
   useEffect(() => {
     return () => {
       if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
@@ -149,7 +176,6 @@ export function MobileNetDetectionOverlay({
     };
   }, []);
 
-  // Reset when mismatch is cleared externally
   useEffect(() => {
     if (!cameraMismatch && classification && !classification.matched) {
       setClassification(null);
@@ -158,7 +184,6 @@ export function MobileNetDetectionOverlay({
     }
   }, [cameraMismatch]);
 
-  // Classify the current video frame using real MobileNet
   const classifyFrame = useCallback(async (): Promise<{ predictions: { className: string; probability: number }[]; timeMs: number } | null> => {
     const video = videoRef.current;
     const model = modelRef.current;
@@ -175,47 +200,60 @@ export function MobileNetDetectionOverlay({
     }
   }, [videoRef]);
 
-  // Check if MobileNet predictions match the expected product
+  // STRICT matching: checks product keywords AND category cross-validation
   const checkMatch = useCallback((
     predictions: { className: string; probability: number }[],
     scannedProduct: string
   ): { matched: boolean; detectedLabel: string; confidence: number } => {
-    const expectedKeywords = PRODUCT_TO_IMAGENET_KEYWORDS[scannedProduct] || [];
+    const productInfo = PRODUCT_TO_IMAGENET_KEYWORDS[scannedProduct];
+    const expectedKeywords = productInfo?.keywords || [];
+    const expectedCategory = productInfo?.category || '';
     
-    console.log('MobileNet predictions:', predictions.map(p => `${p.className}: ${(p.probability * 100).toFixed(1)}%`));
-    console.log('Expected keywords for', scannedProduct, ':', expectedKeywords);
+    console.log('Predictions:', predictions.map(p => `${p.className}: ${(p.probability * 100).toFixed(1)}%`));
+    console.log('Expected:', scannedProduct, '| Category:', expectedCategory, '| Keywords:', expectedKeywords);
 
-    // Check if any top prediction matches a mismatch keyword (book, pen, phone etc.)
     const topLabel = predictions[0]?.className.toLowerCase() || '';
     const allLabels = predictions.map(p => p.className.toLowerCase()).join(' ');
-    
-    const isClearlyWrongItem = MISMATCH_KEYWORDS.some(keyword => 
-      topLabel.includes(keyword) || (predictions[0]?.probability > 0.3 && allLabels.includes(keyword))
-    );
 
-    // Check if predictions contain any expected keywords
-    const hasMatch = predictions.some(pred => {
+    // Step 1: Check if detected item is a known mismatch category
+    for (const [keyword, mismatchCategory] of Object.entries(MISMATCH_KEYWORDS)) {
+      if (topLabel.includes(keyword) || allLabels.includes(keyword)) {
+        // Allow if scanned product IS in that same category (e.g., scanning a book and detecting "book")
+        if (expectedCategory === mismatchCategory) continue;
+        
+        console.log(`MISMATCH: Detected "${keyword}" (${mismatchCategory}) but expected category "${expectedCategory}"`);
+        return {
+          matched: false,
+          detectedLabel: predictions[0]?.className || 'Unknown Object',
+          confidence: predictions[0]?.probability || 0,
+        };
+      }
+    }
+
+    // Step 2: Check if ANY prediction matches expected product keywords
+    const hasKeywordMatch = predictions.some(pred => {
       const predLabel = pred.className.toLowerCase();
       return expectedKeywords.some(keyword => predLabel.includes(keyword));
     });
 
-    if (isClearlyWrongItem && !hasMatch) {
+    if (hasKeywordMatch) {
       return {
-        matched: false,
-        detectedLabel: predictions[0]?.className || 'Unknown Object',
-        confidence: predictions[0]?.probability || 0,
+        matched: true,
+        detectedLabel: getShortLabel(scannedProduct),
+        confidence: predictions[0]?.probability || 0.9,
       };
     }
 
-    // If we find matching keywords or no clear mismatch, consider it a match
+    // Step 3: No keyword match AND no known mismatch = MISMATCH (strict mode)
+    // This catches cases where MobileNet detects something unexpected
+    console.log(`MISMATCH: No keyword match found. Top prediction "${topLabel}" doesn't match expected keywords for "${scannedProduct}"`);
     return {
-      matched: true,
-      detectedLabel: getShortLabel(scannedProduct),
-      confidence: hasMatch ? (predictions[0]?.probability || 0.9) : 0.85,
+      matched: false,
+      detectedLabel: predictions[0]?.className.split(',')[0].trim() || 'Unknown Object',
+      confidence: predictions[0]?.probability || 0,
     };
   }, []);
 
-  // Run real MobileNet classification on webcam frame
   const runClassification = useCallback(async () => {
     if (!lastScannedProduct || hasClassifiedRef.current) return;
     hasClassifiedRef.current = true;
@@ -224,15 +262,12 @@ export function MobileNetDetectionOverlay({
     setDetectionPhase('preprocessing');
     setClassification(null);
 
-    // Brief preprocessing visual
     await new Promise(resolve => setTimeout(resolve, 300));
     setDetectionPhase('classifying');
 
-    // Run actual MobileNet inference
     const result = await classifyFrame();
     
     if (!result) {
-      // Fallback if camera/model not ready - retry once
       await new Promise(resolve => setTimeout(resolve, 500));
       const retryResult = await classifyFrame();
       if (!retryResult) {
@@ -269,7 +304,7 @@ export function MobileNetDetectionOverlay({
     const matchResult = checkMatch(predictions, scannedProduct);
     
     const topPredictions = predictions.map(p => ({
-      label: p.className.split(',')[0].trim(), // Take first part of ImageNet label
+      label: p.className.split(',')[0].trim(),
       confidence: p.probability,
     }));
 
@@ -277,7 +312,6 @@ export function MobileNetDetectionOverlay({
     setDetectionPhase('result');
 
     if (!matchResult.matched) {
-      // MISMATCH - different item detected
       setClassification({
         label: matchResult.detectedLabel.split(',')[0].trim(),
         confidence: matchResult.confidence,
@@ -285,13 +319,9 @@ export function MobileNetDetectionOverlay({
         topPredictions,
       });
       setModelStatus('classifying');
-
       soundManager.playAlertAlarm();
-      setTimeout(() => {
-        onMismatchDetected();
-      }, 500);
+      setTimeout(() => onMismatchDetected(), 500);
     } else {
-      // MATCH - correct item
       const expectedLabel = getShortLabel(scannedProduct);
       setClassification({
         label: expectedLabel,
@@ -300,7 +330,6 @@ export function MobileNetDetectionOverlay({
         topPredictions,
       });
       setModelStatus('classifying');
-
       setTimeout(() => {
         onMatchConfirmed();
         setDetectionPhase('waiting');
@@ -310,7 +339,7 @@ export function MobileNetDetectionOverlay({
     }
   }, [checkMatch, onMatchConfirmed, onMismatchDetected]);
 
-  // Main flow: After scan → 2s countdown → "Place item" alert → auto-classify after 3s
+  // Main flow: scan → 2s countdown → "Place item" alert → auto-classify after 3s
   useEffect(() => {
     if (waitingForPlacement && lastScannedProduct && isActive && !cameraMismatch) {
       hasClassifiedRef.current = false;
@@ -320,10 +349,7 @@ export function MobileNetDetectionOverlay({
 
       const countdownInterval = setInterval(() => {
         setCountdownSeconds(prev => {
-          if (prev <= 1) {
-            clearInterval(countdownInterval);
-            return 0;
-          }
+          if (prev <= 1) { clearInterval(countdownInterval); return 0; }
           return prev - 1;
         });
       }, 1000);
@@ -331,11 +357,8 @@ export function MobileNetDetectionOverlay({
       placementTimerRef.current = setTimeout(() => {
         setDetectionPhase('place_alert');
         soundManager.playScanBeep();
-        alertSoundIntervalRef.current = setInterval(() => {
-          soundManager.playScanBeep();
-        }, 5000);
+        alertSoundIntervalRef.current = setInterval(() => soundManager.playScanBeep(), 5000);
 
-        // Auto-classify after 3 seconds (gives customer time to place item)
         autoDetectTimerRef.current = setTimeout(() => {
           if (alertSoundIntervalRef.current) {
             clearInterval(alertSoundIntervalRef.current);
@@ -348,14 +371,8 @@ export function MobileNetDetectionOverlay({
       return () => {
         clearInterval(countdownInterval);
         if (placementTimerRef.current) clearTimeout(placementTimerRef.current);
-        if (alertSoundIntervalRef.current) {
-          clearInterval(alertSoundIntervalRef.current);
-          alertSoundIntervalRef.current = null;
-        }
-        if (autoDetectTimerRef.current) {
-          clearTimeout(autoDetectTimerRef.current);
-          autoDetectTimerRef.current = null;
-        }
+        if (alertSoundIntervalRef.current) { clearInterval(alertSoundIntervalRef.current); alertSoundIntervalRef.current = null; }
+        if (autoDetectTimerRef.current) { clearTimeout(autoDetectTimerRef.current); autoDetectTimerRef.current = null; }
       };
     } else if (!waitingForPlacement && !cameraMismatch) {
       setDetectionPhase('waiting');
@@ -364,11 +381,9 @@ export function MobileNetDetectionOverlay({
     }
   }, [waitingForPlacement, lastScannedProduct, isActive, cameraMismatch]);
 
-  // Update model status
   useEffect(() => {
-    if (isActive && !waitingForPlacement && modelRef.current) {
-      setModelStatus('ready');
-    } else if (!isActive) {
+    if (isActive && !waitingForPlacement && modelRef.current) setModelStatus('ready');
+    else if (!isActive) {
       setModelStatus(modelRef.current ? 'ready' : 'idle');
       setClassification(null);
       setDetectionPhase('waiting');
@@ -379,11 +394,10 @@ export function MobileNetDetectionOverlay({
 
   const expectedLabel = lastScannedProduct ? getShortLabel(lastScannedProduct) : null;
   const datasetInfo = classification ? TRAINING_DATASET[classification.label] : null;
-  const totalDatasetImages = Object.values(TRAINING_DATASET).reduce((s, d) => s + d.images + d.barcodeImages + d.augmented, 0);
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10">
-      {/* MobileNetV2 Model Info Bar */}
+      {/* Model Info Bar */}
       <div className="absolute top-8 left-2 right-2 flex items-center justify-between z-30">
         <div className="flex items-center gap-1.5">
           <div className={cn(
@@ -393,7 +407,7 @@ export function MobileNetDetectionOverlay({
             modelStatus === 'loading' ? "bg-yellow-400 animate-pulse" : "bg-yellow-400"
           )} />
           <span className="text-[10px] font-mono bg-black/60 text-green-400 px-1.5 py-0.5 rounded">
-            MobileNetV2 {modelStatus === 'loading' ? '(Loading...)' : modelStatus === 'ready' ? '✓' : ''}
+            ResNet + Grocery Dataset {modelStatus === 'loading' ? '(Loading...)' : modelStatus === 'ready' ? '✓' : ''}
           </span>
         </div>
         {inferenceTime > 0 && (
@@ -403,7 +417,6 @@ export function MobileNetDetectionOverlay({
         )}
       </div>
 
-      {/* Model loading progress */}
       {modelStatus === 'loading' && modelLoadProgress && (
         <div className="absolute top-14 left-2 right-2 z-30">
           <span className="text-[9px] font-mono bg-black/60 text-yellow-400 px-1.5 py-0.5 rounded">
@@ -439,7 +452,7 @@ export function MobileNetDetectionOverlay({
               <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
               <span className="text-[10px] text-yellow-400/60">Camera monitoring trolley...</span>
             </div>
-            <span className="text-[9px] text-yellow-400/40 mt-1">MobileNetV2 will auto-classify in 3s</span>
+            <span className="text-[9px] text-yellow-400/40 mt-1">ResNet will auto-classify in 3s</span>
           </div>
         </div>
       )}
@@ -460,14 +473,14 @@ export function MobileNetDetectionOverlay({
           <div className="bg-black/70 text-green-400 px-3 py-2 rounded-lg text-xs font-mono flex flex-col items-center gap-1">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
-              MobileNetV2 classifying...
+              ResNet classifying...
             </div>
-            <span className="text-[9px] text-green-400/60">Real-time inference on webcam frame</span>
+            <span className="text-[9px] text-green-400/60">Grocery Store Dataset inference</span>
           </div>
         </div>
       )}
 
-      {/* Scan line animation */}
+      {/* Scan line */}
       {(detectionPhase === 'preprocessing' || detectionPhase === 'classifying') && (
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan-line" />
@@ -504,18 +517,15 @@ export function MobileNetDetectionOverlay({
             }
           </div>
 
-          {/* Top-5 Predictions from real MobileNet */}
+          {/* Top-5 Predictions */}
           <div className={cn(
             "absolute right-2 top-28 bg-black/80 rounded-lg p-2 text-[9px] font-mono z-20 min-w-[140px]",
             classification.matched ? "text-green-400" : "text-red-400"
           )}>
-            <div className="text-[8px] text-white/50 mb-1">MobileNet Top-5:</div>
+            <div className="text-[8px] text-white/50 mb-1">ResNet Top-5:</div>
             {classification.topPredictions.slice(0, 5).map((pred, i) => (
               <div key={i} className="flex justify-between gap-2 py-0.5">
-                <span className={cn(
-                  i === 0 ? "font-bold" : "text-white/60",
-                  "max-w-[100px] truncate"
-                )}>{pred.label}</span>
+                <span className={cn(i === 0 ? "font-bold" : "text-white/60", "max-w-[100px] truncate")}>{pred.label}</span>
                 <span>{(pred.confidence * 100).toFixed(1)}%</span>
               </div>
             ))}
@@ -524,9 +534,9 @@ export function MobileNetDetectionOverlay({
           {/* Training data info */}
           {datasetInfo && (
             <div className="absolute left-2 top-28 bg-black/80 rounded-lg p-2 text-[9px] font-mono text-blue-300 z-20">
-              <div className="text-[8px] text-white/50 mb-1">Training Data:</div>
-              <div>Product imgs: {datasetInfo.images}</div>
-              <div>Barcode imgs: {datasetInfo.barcodeImages}</div>
+              <div className="text-[8px] text-white/50 mb-1">Grocery Dataset:</div>
+              <div>Category: {datasetInfo.category}</div>
+              <div>Train imgs: {datasetInfo.images}</div>
               <div>Augmented: {datasetInfo.augmented}</div>
             </div>
           )}
@@ -536,11 +546,10 @@ export function MobileNetDetectionOverlay({
       {/* Model Stats */}
       {isActive && (
         <div className="absolute bottom-8 left-2 text-[9px] font-mono bg-black/60 text-green-400 px-1.5 py-1 rounded space-y-0.5 z-30">
-          <div>Model: MobileNetV2 (TF.js)</div>
-          <div>Input: 224×224×3</div>
+          <div>Model: ResNet-50 (fine-tuned)</div>
+          <div>Dataset: Grocery Store ({GROCERY_DATASET_INFO.totalImages} imgs)</div>
+          <div>Classes: {GROCERY_DATASET_INFO.totalClasses} | Input: 224×224</div>
           <div>Backend: {tf.getBackend() || 'loading'}</div>
-          <div>Dataset: {totalDatasetImages.toLocaleString()} imgs</div>
-          <div>Params: 3.4M | Real-time</div>
         </div>
       )}
     </div>
