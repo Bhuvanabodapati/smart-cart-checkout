@@ -24,36 +24,48 @@ interface MobileNetDetectionOverlayProps {
 // Grocery Store Dataset Categories (kaggle.com/datasets/validmodel/grocery-store-dataset)
 // Each product mapped to expected ImageNet labels + grocery category for cross-validation
 const PRODUCT_TO_IMAGENET_KEYWORDS: Record<string, { keywords: string[]; category: string }> = {
-  "Pond's Hyaluronic Super Light Gel (25ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "packet", "cap", "lid", "tube"], category: "personal_care" },
-  "Pond's Light Moisturizer (200ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "pump", "dispenser"], category: "personal_care" },
-  "Lacto Calamine Face Lotion (60ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "tube"], category: "personal_care" },
-  "Aqualogica Avocado Moisturizer (100g)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "tube"], category: "personal_care" },
-  "Aashirvaad Atta (1Kg)": { keywords: ["packet", "bag", "sack", "carton", "envelope", "grocery", "flour"], category: "staples" },
-  "Tata Salt (1Kg)": { keywords: ["packet", "bag", "salt", "grocery", "carton", "saltshaker"], category: "staples" },
-  "Aashirvaad Clove Whole Spice (50g)": { keywords: ["packet", "spice", "grocery", "envelope", "herb"], category: "spices" },
-  "Maggi 2-Minute Masala Noodles (70g)": { keywords: ["packet", "noodle", "envelope", "carton", "grocery", "ramen"], category: "instant_food" },
-  "Cadbury Dairy Milk Fruit & Nut (180g)": { keywords: ["chocolate", "candy", "bar", "packet", "confectionery", "wrapper", "sweet"], category: "snacks" },
-  "Lay's Salted Potato Chips (36g)": { keywords: ["packet", "bag", "chips", "snack", "grocery", "crisp"], category: "snacks" },
-  "Chips Pack": { keywords: ["packet", "bag", "chips", "snack", "crisp"], category: "snacks" },
-  "Chocolate Bar": { keywords: ["chocolate", "candy", "bar", "wrapper", "confectionery"], category: "snacks" },
-  "Cookies Pack": { keywords: ["packet", "cookie", "biscuit", "snack"], category: "snacks" },
-  "Data Bites by Farmley (20g)": { keywords: ["packet", "bag", "snack", "grocery", "envelope", "nut"], category: "snacks" },
-  "Thums Up (250ml)": { keywords: ["bottle", "pop", "soda", "water", "beverage", "can", "cola"], category: "beverages" },
-  "Sprite (2L)": { keywords: ["bottle", "pop", "soda", "water", "beverage", "plastic"], category: "beverages" },
-  "Juice (1L)": { keywords: ["bottle", "juice", "carton", "beverage"], category: "beverages" },
-  "Milk (1L)": { keywords: ["milk", "bottle", "carton", "packet", "dairy"], category: "dairy" },
-  "Eggs (12pc)": { keywords: ["egg", "tray", "carton"], category: "dairy" },
-  "Butter (500g)": { keywords: ["butter", "packet", "tub", "dairy"], category: "dairy" },
-  "Cheese (200g)": { keywords: ["cheese", "packet", "dairy"], category: "dairy" },
-  "Bread": { keywords: ["bread", "loaf", "bakery", "bun"], category: "bakery" },
-  "Rice (1kg)": { keywords: ["bag", "packet", "sack", "rice", "grain"], category: "staples" },
-  "Apple (1kg)": { keywords: ["apple", "fruit", "granny", "red"], category: "fruits" },
-  "Banana (1dz)": { keywords: ["banana", "fruit", "bunch"], category: "fruits" },
-  "Tomatoes (1kg)": { keywords: ["tomato", "vegetable"], category: "vegetables" },
-  "Onions (1kg)": { keywords: ["onion", "vegetable"], category: "vegetables" },
-  "Potatoes (1kg)": { keywords: ["potato", "vegetable"], category: "vegetables" },
-  "Ice Cream Feast Vanilla (1L)": { keywords: ["ice cream", "tub", "container", "carton", "frozen"], category: "frozen" },
-  "Compilers (1Kg)": { keywords: ["book", "notebook", "binder", "library", "bookshop", "comic", "text"], category: "books" },
+  // Personal Care — MobileNet sees these as bottles, containers, dispensers, toiletry items
+  "Pond's Hyaluronic Super Light Gel (25ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "packet", "cap", "lid", "tube", "soap", "dispenser", "hair spray", "perfume", "medicine", "pill", "band aid", "face powder", "lipstick", "rubber eraser", "paintbrush", "mask", "shower", "bath", "plastic", "water", "pop"], category: "personal_care" },
+  "Pond's Light Moisturizer (200ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "container", "pump", "dispenser", "soap", "hair spray", "perfume", "medicine", "pill", "band aid", "face powder", "lipstick", "plastic", "water", "pop", "shower", "bath", "tube", "packet", "cap"], category: "personal_care" },
+  "Lacto Calamine Face Lotion (60ml)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "tube", "soap", "dispenser", "hair spray", "perfume", "medicine", "pill", "band aid", "face powder", "lipstick", "plastic", "water", "pop", "packet", "cap"], category: "personal_care" },
+  "Aqualogica Avocado Moisturizer (100g)": { keywords: ["lotion", "cream", "sunscreen", "cosmetic", "bottle", "jar", "tube", "soap", "dispenser", "hair spray", "perfume", "medicine", "pill", "band aid", "face powder", "lipstick", "plastic", "water", "pop", "packet", "cap", "container"], category: "personal_care" },
+  // Staples/Grocery packages — MobileNet sees these as packets, bags, cartons, envelopes
+  "Aashirvaad Atta (1Kg)": { keywords: ["packet", "bag", "sack", "carton", "envelope", "grocery", "flour", "plastic bag", "shopping bag", "paper towel", "diaper", "bib", "pillow", "box", "container", "tray", "plate"], category: "staples" },
+  "Tata Salt (1Kg)": { keywords: ["packet", "bag", "salt", "grocery", "carton", "saltshaker", "plastic bag", "shopping bag", "envelope", "box", "container", "paper towel", "tray", "plate", "sack"], category: "staples" },
+  "Aashirvaad Clove Whole Spice (50g)": { keywords: ["packet", "spice", "grocery", "envelope", "herb", "plastic bag", "bag", "box", "container", "paper towel", "tea", "cup"], category: "spices" },
+  // Instant food — packets, wrappers
+  "Maggi 2-Minute Masala Noodles (70g)": { keywords: ["packet", "noodle", "envelope", "carton", "grocery", "ramen", "plastic bag", "shopping bag", "bag", "box", "container", "menu", "plate", "tray", "soup"], category: "instant_food" },
+  // Snacks — wrappers, packets, bags, candy
+  "Cadbury Dairy Milk Fruit & Nut (180g)": { keywords: ["chocolate", "candy", "bar", "packet", "confectionery", "wrapper", "sweet", "envelope", "plastic bag", "bag", "box", "container", "grocery", "tray", "plate"], category: "snacks" },
+  "Lay's Salted Potato Chips (36g)": { keywords: ["packet", "bag", "chips", "snack", "crisp", "plastic bag", "shopping bag", "envelope", "grocery", "box", "container", "tray"], category: "snacks" },
+  "Chips Pack": { keywords: ["packet", "bag", "chips", "snack", "crisp", "plastic bag", "shopping bag", "envelope", "grocery", "box", "container"], category: "snacks" },
+  "Chocolate Bar": { keywords: ["chocolate", "candy", "bar", "wrapper", "confectionery", "packet", "envelope", "bag", "box", "sweet"], category: "snacks" },
+  "Cookies Pack": { keywords: ["packet", "cookie", "biscuit", "snack", "bag", "box", "container", "cracker", "pretzel", "waffle"], category: "snacks" },
+  "Data Bites by Farmley (20g)": { keywords: ["packet", "bag", "snack", "grocery", "envelope", "nut", "plastic bag", "box", "container"], category: "snacks" },
+  // Beverages — bottles, cans, containers
+  "Thums Up (250ml)": { keywords: ["bottle", "pop", "soda", "water", "beverage", "can", "cola", "beer", "wine", "cup", "glass", "pitcher", "flask", "container", "plastic", "cap", "label"], category: "beverages" },
+  "Sprite (2L)": { keywords: ["bottle", "pop", "soda", "water", "beverage", "plastic", "beer", "wine", "cup", "glass", "pitcher", "flask", "container", "cap", "label", "can"], category: "beverages" },
+  "Juice (1L)": { keywords: ["bottle", "juice", "carton", "beverage", "cup", "glass", "pitcher", "container", "pop", "water", "flask", "can"], category: "beverages" },
+  // Dairy
+  "Milk (1L)": { keywords: ["milk", "bottle", "carton", "packet", "dairy", "cup", "pitcher", "container", "jug", "water", "plastic", "glass"], category: "dairy" },
+  "Eggs (12pc)": { keywords: ["egg", "tray", "carton", "hen", "plate", "container", "box"], category: "dairy" },
+  "Butter (500g)": { keywords: ["butter", "packet", "tub", "dairy", "container", "box", "cup", "plate", "margarine"], category: "dairy" },
+  "Cheese (200g)": { keywords: ["cheese", "packet", "dairy", "container", "box", "plate", "cheddar"], category: "dairy" },
+  // Bakery
+  "Bread": { keywords: ["bread", "loaf", "bakery", "bun", "toast", "french loaf", "bagel", "pretzel", "muffin", "roll", "dough"], category: "bakery" },
+  // Staples
+  "Rice (1kg)": { keywords: ["bag", "packet", "sack", "rice", "grain", "plastic bag", "shopping bag", "box", "container", "envelope"], category: "staples" },
+  // Fruits — MobileNet is good at detecting fruits
+  "Apple (1kg)": { keywords: ["apple", "fruit", "granny", "red", "green", "custard apple", "fig", "pomegranate", "orange", "lemon"], category: "fruits" },
+  "Banana (1dz)": { keywords: ["banana", "fruit", "bunch", "plantain", "yellow"], category: "fruits" },
+  // Vegetables
+  "Tomatoes (1kg)": { keywords: ["tomato", "vegetable", "red", "sauce", "bell pepper", "strawberry", "cherry"], category: "vegetables" },
+  "Onions (1kg)": { keywords: ["onion", "vegetable", "bulb", "garlic", "turnip", "radish", "head cabbage"], category: "vegetables" },
+  "Potatoes (1kg)": { keywords: ["potato", "vegetable", "russet", "sweet potato", "yam", "turnip"], category: "vegetables" },
+  // Frozen
+  "Ice Cream Feast Vanilla (1L)": { keywords: ["ice cream", "tub", "container", "carton", "frozen", "cup", "box", "popsicle", "chocolate", "dessert"], category: "frozen" },
+  // Books
+  "Compilers (1Kg)": { keywords: ["book", "notebook", "binder", "library", "bookshop", "comic", "text", "jacket", "envelope", "packet", "menu", "web site", "crossword", "jigsaw", "letter"], category: "books" },
 };
 
 // Non-grocery items that trigger mismatch (with their category for cross-checking)
