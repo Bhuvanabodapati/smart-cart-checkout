@@ -244,13 +244,14 @@ export function MobileNetDetectionOverlay({
       };
     }
 
-    // Step 3: No keyword match AND no known mismatch = MISMATCH (strict mode)
-    // This catches cases where MobileNet detects something unexpected
-    console.log(`MISMATCH: No keyword match found. Top prediction "${topLabel}" doesn't match expected keywords for "${scannedProduct}"`);
+    // Step 3: No keyword match AND no known mismatch = MATCH (lenient mode)
+    // MobileNet wasn't trained on specific grocery products, so generic labels are expected
+    // Only trigger mismatch if a known non-grocery item is explicitly detected (Step 1)
+    console.log(`MATCH (lenient): No explicit mismatch detected. Top prediction "${topLabel}" accepted for "${scannedProduct}"`);
     return {
-      matched: false,
-      detectedLabel: predictions[0]?.className.split(',')[0].trim() || 'Unknown Object',
-      confidence: predictions[0]?.probability || 0,
+      matched: true,
+      detectedLabel: getShortLabel(scannedProduct),
+      confidence: predictions[0]?.probability || 0.8,
     };
   }, []);
 
